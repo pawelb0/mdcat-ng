@@ -6,3 +6,6 @@
 
 # VSCode settings
 /.vscode/
+
+# Git worktrees
+/.worktrees/
