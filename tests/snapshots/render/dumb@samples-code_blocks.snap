@@ -1,0 +1,32 @@
+---
+source: tests/render.rs
+assertion_line: 111
+expression: "render_to_string(markdown_file, &dumb_settings)"
+input_file: tests/markdown/samples/code_blocks.md
+snapshot_kind: text
+---
+Code blocks without syntax highlighting:
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Some plain                                                                   │
+│ code block                                                                   │
+│    fooo                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+Or with syntax highlighting, eg, Rust:
+
+╭── rust ──────────────────────────────────────────────────────────────────────╮
+│ fn main() {                                                                  │
+│     println!("Hello world")                                                  │
+│ }                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+Or Scala:
+
+╭── scala ─────────────────────────────────────────────────────────────────────╮
+│ object HelloWorld {                                                          │
+│   def main(args: Array[String]): Unit = {                                    │
+│     println("Hello, world!")                                                 │
+│   }                                                                          │
+│ }                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯

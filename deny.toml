@@ -7,7 +7,16 @@ targets = [
 
 [advisories]
 version = 2
-ignore = []
+ignore = [
+    # dtolnay archived the `paste` repo (RUSTSEC-2024-0436). Pulled
+    # in transitively through icy_sixel / quantette; no action on our
+    # side until upstream migrates.
+    "RUSTSEC-2024-0436",
+    # bincode 1.x development ceased (RUSTSEC-2025-0141). Pulled in
+    # through syntect's build-time dump loader; safe alternative only
+    # lands once syntect publishes against bincode 2 / postcard.
+    "RUSTSEC-2025-0141",
+]
 
 [licenses]
 version = 2

@@ -8,6 +8,131 @@ Use `cargo release` to create a new release.
 
 ## [Unreleased]
 
+## [3.0.0-alpha.0] – development line
+
+The 3.0 series is a continuation fork of [swsnr/mdcat] 2.7.1, which was marked
+unmaintained in December 2024. It focuses on structural cleanup and expanded
+terminal coverage. Breaking changes in this series are expected.
+
+### Added
+
+- **Sixel graphics protocol** via `icy_sixel` (default-on `sixel` feature).
+  Inline images now work on any terminal that understands DEC Sixel, including
+  Foot, Contour, mlterm, and Windows Terminal.
+- **Tmux and GNU screen passthrough.** When `$TMUX` or `$STY` is set, image
+  escape sequences are automatically wrapped in DCS passthrough so the
+  multiplexer forwards them to the real terminal. Requires
+  `set -g allow-passthrough on` in tmux.
+- **Active DA1 capability probing** (Unix). When env-var detection falls
+  through to plain ANSI and stdout is interactive, mdcat sends a Primary
+  Device Attributes query and, if the response advertises Sixel support,
+  enables the Sixel image protocol automatically. Disable with
+  `--no-probe-terminal`.
+- **Detection for 11 more terminal emulators**: Alacritty, Apple Terminal,
+  Contour, Foot, Hyper, Konsole, mlterm, Rio, Warp, and Windows Terminal.
+  See the README terminal matrix for per-terminal capabilities.
+- `--detect-terminal` now reports a detected multiplexer and a probed
+  Sixel capability in addition to the terminal name.
+- Public API additions: `Multiplexer`, `Settings.multiplexer`,
+  `mdcat::terminal::probe_da1`, `DeviceAttributes`.
+- **`--remote-images` flag**, with remote fetches off by default.
+  Previous versions fetched every HTTP/HTTPS image during rendering,
+  which made rendering a README with shield badges or hero GIFs take
+  several hundred ms on any connection. mdcat now renders remote
+  images as OSC 8 hyperlinks unless `--remote-images` is passed.
+  `--local` / `-l` is kept as a no-op alias for 2.x scripts.
+- **Footnotes.** `[^label]` references render bold inline; each
+  definition emits a bold `[^label]:` header followed by the body
+  indented four columns.
+- **Definition lists.** `term\n: definition` renders the term bold
+  on its own line with the definition indented two columns below.
+- **Wiki links.** `[[Page]]` and `[[Page|label]]` render as OSC 8
+  hyperlinks, using the pipe label when present.
+- **GFM alert blockquotes.** `> [!NOTE]`, `> [!TIP]`,
+  `> [!IMPORTANT]`, `> [!WARNING]`, and `> [!CAUTION]` render a bold
+  colour-coded label on the first line of the quote. Colour mapping
+  matches the GitHub web renderer: note = blue, tip = green,
+  important = magenta, warning = yellow, caution = red.
+- **Smart punctuation.** Straight quotes promote to curly quotes,
+  `--` becomes an en-dash, `---` an em-dash, and `...` an ellipsis
+  during parsing. Opt out by editing the source — no flag yet.
+- **Interactive `mdless` pager.** Running the binary as `mdless` (or via
+  the `mdless` multicall entry) now launches a markdown-aware built-in
+  pager instead of shelling out to `less -r`. Supports vi-style scrolling
+  (`j`/`k`/space/b/d/u/g/G/numeric+G), forward/backward search (`/`,`?`)
+  with smart-case and regex (`--regex`), match cycling (`n`/`N`), heading
+  jumps (`]]`/`[[`), a full-frame table-of-contents modal (`T`), and
+  bookmarks (`m{letter}` / `'{letter}`). SGR-aware highlighting keeps
+  bold, colour, and link styles intact across the match. Pass
+  `--external-pager` to restore the 2.x `less -r` shellout, or
+  `--no-pager` (`-P`) to print to stdout.
+- Public `mdcat::mdless` module exposing the pager's buffer, search, and
+  view primitives for downstream reuse.
+- `mdcat::RenderObserver` trait lets callers subscribe to
+  `pulldown-cmark` events paired with the writer's current byte offset,
+  which is how the pager indexes headings.
+- **Pipe-safe output.** When stdout is not a TTY (`mdcat file | less`,
+  redirection to a file, capture by scripting) mdcat drops all ANSI styling
+  and image protocols, matching `grep`/`ls`/`cat` convention. Use `--ansi`,
+  `--paginate`, or `mdless` to keep colours.
+- **Right-edge margin.** Output reserves ~2 columns of breathing room on
+  the right edge so rules, tables, and code-block frames don't hug the
+  terminal edge. `--columns N` still overrides exactly.
+- `sample/stress.md` kitchen-sink document exercising every supported
+  markdown construct plus pathological edge cases; useful as a visual QA
+  target.
+
+### Changed
+
+- **Collapsed `pulldown-cmark-mdcat` into the `mdcat` crate.** Consumers of
+  the library on crates.io should migrate to `mdcat::*` paths. The
+  library is no longer published separately.
+- **Typed error for the rendering library.** `push_tty` now returns
+  `RenderResult<()>` (alias for `Result<(), RenderError>`) instead of
+  `std::io::Result<()>`. `RenderError` wraps `std::io::Error` via
+  `#[from]`, so `?` on inner IO errors continues to work, but callers can
+  pattern-match on `RenderError::{Io, ImageProtocol, Svg}` variants instead
+  of relying on `ErrorKind` hacks.
+- **Heading rendering rewrite.** H1 now gets a `═══` underline spanning
+  the terminal width; H2 gets a `───` underline. H3–H6 are plain bold
+  colour (no prefix glyphs — `###` reads as raw markdown; chevrons felt
+  arbitrary). Previous `┄` dashed-line prefixes are gone.
+- **Blockquote accent bar.** Every line of a blockquote gets a grey `▌ `
+  bar at the quote's indent column, carrying through wrapped lines.
+- **Tables** use Unicode box drawing (`┌─┬─┐ ├─┼─┤ └─┴─┘ │`). Cells that
+  would overflow the terminal are truncated with `…`, and column widths
+  use `textwrap::display_width` so CJK / wide glyphs measure correctly.
+- **Code blocks** render as a box with a language label in the top border
+  (`╭── rust ─────────╮ ... ╰──────╯`). Each code line is prefixed with
+  `│ `, padded to the right border, and closed with ` │`.
+- **Table rules** honour `Theme.rule_color` instead of using the terminal
+  default, matching how horizontal `<hr>`s render.
+- **Multi-line HTML blocks** re-indent every line rather than losing
+  indentation on lines 2+.
+- Unknown `(state, event)` pairs in the render state machine now trace-log
+  and no-op instead of panicking, so future `pulldown-cmark` events degrade
+  gracefully rather than aborting the document.
+- Split the 978-LOC `render.rs` into focused submodules
+  (`tables`, `images`, `links`, `html`, `code`).
+- Introduced pedantic clippy lints with a curated allowlist.
+- Bumped every direct dependency to its latest release, including
+  majors — rustix 0.38 → 1.1, pulldown-cmark 0.12 → 0.13, resvg 0.43 →
+  0.47, gethostname 0.5 → 1.1, similar-asserts 1.6 → 2.0, terminal_size
+  0.3 → 0.4 — plus the usual patch/minor bumps (anstyle, anyhow, clap,
+  syntect, tracing, url, image, insta, regex, anstyle-query, …).
+  No API adjustments were needed on our side: the pulldown-cmark
+  Event/Tag variant shapes we pattern-match against are stable across
+  0.12 → 0.13, and the rustix termios API we use in probe.rs survived
+  the 0.38 → 1.0 reshuffle intact.
+
+### Removed
+
+- Dropped the `Osc8Links` marker struct, which was never used.
+- Dropped the explicit `glob` dev-dependency; `insta`'s `glob` feature
+  already pulls it in transitively.
+
+[swsnr/mdcat]: https://github.com/swsnr/mdcat
+
 ## [2.7.1] – 2024-12-14
 
 ### Removed

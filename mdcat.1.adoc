@@ -1,266 +1,362 @@
 = mdcat(1)
-Sebastian Wiesner <sebastian@swsnr.de>
+Pawel Boguszewski; Sebastian Wiesner
 :doctype: manpage
-:revnumber: 2.7.1
-:revdate: 2024-12-14
+:revnumber: 3.0.0
+:revdate: 2026-04-20
 :mansource: mdcat {revnumber}
 :manmanual: mdcat
 
 == Name
 
-mdcat - render CommonMark Markdown to text terminals
+mdcat, mdless - render CommonMark Markdown on text terminals
 
 == Synopsis
 
 *mdcat* [_OPTIONS_] [FILE]...
 
-*mdless* [_OPTIONS_] [FILE]...
+*mdless* [_OPTIONS_] [FILE]
 
 == Description
 
-mdcat renders Markdown ``FILE``s in CommonMark dialect to text terminals with sophisticated formatting.
-If no `FILE` is given, or if `FILE` is '-', it reads from standard input.
+`mdcat` renders Markdown files in the CommonMark dialect (plus a set
+of GFM extensions) on text terminals.
+If no `FILE` is given, or if `FILE` is `-`, input is read from standard input.
 
-If invoked as `mdless` automatically use a pager to display the output, see below.
+The same binary ships under two names:
 
-=== CommonMark and terminal support
+*mdcat*::
+    Render to stdout and exit. Best for quick inspection, piping into
+    other tools, or as a `cat` replacement for Markdown files.
 
-mdcat supports all basic CommonMark syntax plus a few extensions, highlights syntax in code blocks, and shows inline links and even inline images in some terminal programs.
-In iTerm2 it also adds jump marks for section headings.
+*mdless*::
+    Launch a built-in markdown-aware interactive pager. Supports
+    scrolling, forward/backward search with live highlighting,
+    heading jumps, a table-of-contents modal, and vi-style
+    bookmarks. See <<mdless>> below for keybindings.
 
-See section <<Terminal support>> below for a list of supported terminal programs and their features.
+Both binaries come from the same `cargo install`; clap's multicall
+dispatch selects the mode from `argv[0]`.
+
+=== Markdown support
+
+mdcat parses https://spec.commonmark.org/[CommonMark] plus these
+GitHub Flavored Markdown extensions:
+
+* Pipe tables
+* Task lists (`- [x]`)
+* Strikethrough (`~~text~~`)
+* Alert blockquotes (`> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`,
+  `> [!WARNING]`, `> [!CAUTION]`)
+* Smart punctuation (curly quotes, en/em dash, ellipsis)
+* Footnote references and definitions (`[^label]`)
+* Definition lists (`term\n: definition`)
+* Wiki links (`[[Page]]`, `[[Page|label]]`)
+
+Not yet rendered: math (`$inline$`, `$$block$$`).
+Inline markup and text wrapping inside table cells are not supported;
+cells truncate with `…` when they exceed the column budget.
 
 === Terminal detection
 
-To enable formatting extensions such as inline images, `mdcat` needs to detect the terminal program, by checking the following environment variables in the given order:
+mdcat identifies the terminal by reading environment variables in
+the following order:
 
-1. `$TERM`
-2. `$TERM_PROGRAM`
-3. `$TERMINOLOGY`
+. `$TERM`
+. `$TERM_PROGRAM` (with `$TERM_PROGRAM_VERSION` where a minimum version is required)
+. `$TERMINOLOGY`
+. Vendor-specific markers such as `$WT_SESSION`, `$KONSOLE_VERSION`, `$TERMINAL_EMULATOR`
+. Multiplexer markers `$TMUX` and `$STY`
 
-For some terminals `mdcat` also checks `$TERM_PROGRAM_VERSION` to determine whether the terminal supports the expected feature set.
+Detected variants drive which image protocol, if any, mdcat uses.
+Pipeline-non-TTY output automatically drops styling and image
+escapes, matching `grep`/`ls`/`cat` convention. Use *--ansi* or
+paginate via *--paginate* / `mdless` to keep colours.
 
-See section <<Environment>> below for a detailed description of each environment variable.
+=== Active capability probing
+
+When environment variables leave mdcat with plain ANSI and stdout is
+a TTY, mdcat sends a Primary Device Attributes (DA1) query to
+`/dev/tty` and, if the response advertises Sixel support, enables
+the Sixel image protocol for the session. Disable with
+*--no-probe-terminal*.
 
 === Pagination
 
-mdcat can render output in a pager; this is the default when run as `mdless`.
-The environment variables `$MDCAT_PAGER` and `$PAGER` control the pager used.
+Running the binary as `mdless` opens the built-in interactive pager
+by default. Running `mdcat --paginate` (or `-p`) pipes the rendered
+output through `$MDCAT_PAGER` / `$PAGER` / `less -r`. Image
+protocols are suppressed in both pager modes because scrolling
+invalidates position-sensitive escapes.
 
-Note that common pagers do not support proprietary terminal codes for e.g. image support, so mdcat falls back to pure ANSI formatting when pagination is enabled.
-In particular this disables all image support which relies on proprietary escape codes.
+=== Multiplexers
 
-=== Image support
+When `$TMUX` or `$STY` is set, mdcat wraps image-protocol output in
+the multiplexer's DCS passthrough envelope so images reach the real
+terminal. tmux requires `set -g allow-passthrough on` in its
+configuration; GNU screen requires no extra setup.
 
-In iTerm2, kitty, Terminology, WezTerm, and VSCode (1.80 or newer) mdcat prints inline images.
-mdcat supports most standard pixel formats by default.
+=== Inline images
 
-mdcat silently ignores images larger than 100 MiB, under the assumption that images of that size cannot reasonably be rendered in a terminal.
+In terminals supporting a recognised image protocol (see
+<<Terminal support>>), mdcat prints pixel images inline. Most
+standard pixel formats decode via the `image` crate. Images larger
+than 100 MiB are silently skipped on the assumption that they would
+not render usefully at terminal scale.
 
-=== SVG support
+=== SVG images
 
-In Terminology mdcat also renders SVG images, using the built-in support of Terminology.
+Terminology renders SVG natively. On terminals using iTerm2, Kitty,
+or Sixel protocols, mdcat rasterises SVG to PNG via
+https://github.com/RazrFalcon/resvg[resvg]. The library supports
+static SVG 1.1; complex SVGs may render incompletely.
 
-In iTerm2, kitty, VSCode, and WezTerm mdcat renders SVG images into pixel graphics using the https://github.com/RazrFalcon/resvg[resvg] library.
-Currently this library only supports SVG 1, and only the static subset thereof; see https://github.com/RazrFalcon/resvg#svg-support[SVG support] for details.
-While this is sufficient for most simple SVG images, complex SVG images may fail to render or render incompletely.
+=== Remote resources
 
-For local SVG files mdcat relies on the file extension to identify SVG images.
-For remote images from HTTP(S) URLs mdcat inspects the `Content-Type` header to identify SVG images.
-
-=== HTTP/HTTPS support
-
-mdcat fetches images from HTTP(S) URLs for rendering if the underlying terminal supports image rendering;
-pass `--local` to disable this and force mdcat to only use images from the local filesystem.
-In this case remote images render as hyperlinks.
-
-Note that some terminals (e.g. Terminology) directly render images from URLs and do not require that mdcat fetches the image data first.
-In this case `--local` has no effect: mdcat always passes the URL to the terminal, and leaves it up to the terminal to fetch it.
+mdcat fetches remote images from HTTP(S) URLs through libcurl. Pass
+*--local* (`-l`) to forbid network access; remote images then render
+as OSC 8 hyperlinks. Terminology-specific URLs are passed through to
+the terminal regardless of *--local*.
 
 == Options
 
--p::
---paginate::
-    Paginate the output of mdcat with a pager like less.
-+
-**Note:** When paginating mdcat only uses standard ANSI formatting and hyperlinks, but no images or other proprietary format codes, because pager programs normally do not support any of these.
-+
-This is the default when run as `mdless`.
+The following options are common to both `mdcat` and `mdless` unless
+noted otherwise.
 
--P::
---no-pager::
-    Do not paginate output.
-+
-This is the default when run as `mdcat`.
+*-c, --no-colour, --no-color*::
+    Disable all colours and other styling. Implied when stdout is
+    not a TTY.
 
--c::
---no-colour::
-    Disable all colours and other styles.
+*--ansi*::
+    Skip terminal detection; use ANSI formatting only. Conflicts
+    with *--no-colour*.
 
---ansi::
-    Skip terminal detection and only use ANSI formatting.
+*--columns=_COLUMNS_*::
+    Render at the given column width instead of auto-detecting the
+    terminal size.
 
---columns=_COLUMNS_::
-    Maximum number of columns to use for text output.
-    Defaults to the size of the underlying terminal if omitted.
+*--remote-images*::
+    Fetch remote (HTTP/HTTPS) images for inline display. Off by
+    default: remote fetches can be slow and open a tracking / SSRF
+    surface a Markdown viewer should not pay for silently. Remote
+    images render as OSC 8 hyperlinks instead when this is unset.
 
--l::
---local::
-    Do not access remote resources.
+*-l, --local*::
+    Deprecated. Kept as a no-op alias for 2.x command lines;
+    local-only is now the default.
 
---fail::
-    Fail immediately at the first FILE which fails to read.
-    By default, mdcat continues with the next file.
+*--fail*::
+    Exit immediately on the first file that fails to load (default:
+    continue to the next file).
 
---detect-terminal::
-    Detect the terminal program, print its name, and exit.
+*--detect-terminal*::
+    Print the detected terminal name, multiplexer, and any probed
+    Sixel capability, then exit.
 
---completions=_SHELL_::
-    Generate completions for _SHELL_ to standard output and exit.
+*--no-probe-terminal*::
+    Skip the DA1 probe that auto-enables Sixel on capable terminals
+    when env-var detection fell through to plain ANSI.
 
-    _SHELL_ can be one of `bash`, `zsh`, `fish`, `powershell`, or `elvish`.
+*--wrap-code*::
+    Wrap code-block lines that exceed the terminal width instead of
+    letting them overflow the right border.
 
--h::
---help::
-    Show a help message to the user and exit.
+*--completions=_SHELL_*::
+    Generate completions for _SHELL_ (one of `bash`, `zsh`, `fish`,
+    `powershell`, `elvish`) to stdout and exit.
 
--V::
---version::
-    Show the version of mdcat and exit.
-    The long flag also includes information about the builtin features.
+*-h, --help*::
+    Show a help message and exit.
 
+*-V, --version*::
+    Print the version and exit. `--version` prints an extended
+    form including copyright and licence.
+
+=== Options for `mdcat`
+
+*-p, --paginate*::
+    Pipe output through `$MDCAT_PAGER` / `$PAGER` / `less -r`.
+    Image protocols are disabled for the duration of the pager
+    session. Overrides a preceding *--no-pager*.
+
+*-P, --no-pager*::
+    Do not paginate output (default). Overrides a preceding
+    *--paginate*.
+
+=== Options for `mdless`
+
+*-P, --no-pager*::
+    Skip the pager and print to stdout, matching `mdcat FILE`.
+
+*--external-pager*::
+    Shell out to `$MDCAT_PAGER` / `$PAGER` / `less -r` instead of
+    the built-in interactive pager. Preserves the 2.x `mdless`
+    behaviour.
+
+*--search=_PATTERN_*::
+    Commit a search before the event loop starts. Equivalent to
+    typing `/PATTERN` after the pager opens. Combines with *--regex*
+    and *--case-sensitive*.
+
+*--regex*::
+    Interpret the search pattern as a regular expression instead of
+    a literal.
+
+*--case-sensitive*::
+    Disable smart-case; force case-sensitive matching on the initial
+    *--search* pattern and every subsequent `/`/`?` query.
+
+[[mdless]]
+== mdless keybindings
+
+| Key | Action
+| `j`, `k`, Down, Up | Scroll one rendered line
+| Space, `b`, PageDown, PageUp | Page forward / back
+| Ctrl-F, Ctrl-B | Page forward / back
+| Ctrl-D, Ctrl-U | Half page forward / back
+| `g`, `gg` | Jump to top
+| `G` | Jump to bottom
+| _N_`G` | Jump to rendered line _N_
+| `0`, Home | Jump to the first line
+| End | Jump to the last line
+| `/` _PATTERN_ Enter | Forward search
+| `?` _PATTERN_ Enter | Backward search
+| `n`, `N` | Cycle to next / previous match
+| `Esc` | Clear search highlights
+| `]]`, `[[` | Next / previous heading
+| `T` | Toggle the table-of-contents modal
+| Enter (in TOC) | Jump to the highlighted heading and close the modal
+| `m`_{a-z}_ | Save current top as bookmark _a_..._z_
+| `'`_{a-z}_ | Jump back to a saved bookmark
+| Ctrl-L | Force redraw
+| `q`, Ctrl-C | Quit
+
+The pager renders the full document to an in-memory buffer once at
+startup. Scrolling, searching, and highlighting all operate on that
+buffer without re-rendering. Image protocols are suppressed: the
+renderer falls back to rendering images as OSC 8 hyperlinks instead.
 
 == Exit status
 
-mdcat exits with 0 if no error occurred, or 1 otherwise.
+`mdcat` exits `0` on success, `1` on errors rendering a file (unless
+*--fail* was passed, in which case the first failure exits non-zero).
+If *--paginate* is set and the external pager fails to start, mdcat
+exits with `128`.
 
-If run as `mdless` or if `--paginate` is given and the pager fails to start mdcat exists with 128.
+`mdless` exits `0` on clean quit, `1` on failure to open or render
+the input.
 
 == Environment
 
-TERM::
+*TERM*, *TERM_PROGRAM*, *TERM_PROGRAM_VERSION*, *TERMINOLOGY*::
+    Consulted in order during terminal detection.
 
-    `mdcat` first checks this variable to identify the terminal program (see section <<Terminal detection>>).
-It understands the following values.
-+
-    * `wezterm`: WezTerm.  Note that WezTerm sets `$TERM` to `xterm-256color` by default, and only uses `wezterm` for `$TERM` if explicitly configured to do so.
-    * `xterm-kitty`: kitty
-    * `xterm-ghostty`: Ghostty
-+
-For all other values `mdcat` proceeds to check `$TERM_PROGRAM`.
+*WT_SESSION*::
+    Presence indicates Windows Terminal.
 
-TERM_PROGRAM::
+*KONSOLE_VERSION*::
+    Presence indicates KDE Konsole.
 
-    If `$TERM` does not conclusively identify the terminal program `mdcat` checks this variable next. It understands the following values:
-+
-    * `iTerm.app`: iTerm2
-    * `WezTerm`: WezTerm
-    * `vscode`: VSCode integrated terminal, but only if `$TERM_PROGRAM_VERSION` indicates a sufficient version to support all required features..
-    * `ghostty`: Ghostty
-+
-For all other values `mdcat` proceeds to check `$TERMINOLOGY`.
+*TERMINAL_EMULATOR*::
+    Set to `contour` to identify Contour.
 
-TERM_PROGRAM_VERSION::
+*TMUX*, *STY*::
+    Trigger DCS passthrough wrapping for image escapes inside tmux
+    or GNU screen.
 
-    If `$TERM_PROGRAM` is `vscode`, `mdcat` checks this variable to determine whether VSCode has a sufficient version to support all required features.
+*COLUMNS*, *ROWS*::
+    Fallback terminal size when `ioctl(TIOCGWINSZ)` fails.
 
-TERMINOLOGY::
+*MDCAT_PAGER*, *PAGER*::
+    Pager command used by `mdcat --paginate` and by `mdless
+    --external-pager`. Subject to shell-like word-splitting but not
+    to parameter or process substitution. Empty `$MDCAT_PAGER`
+    disables pagination. Default: `less -r`.
 
-    If this variable is `1`, mdcat assumes that the terminal is Terminology.
-+
-Otherwise `mdcat` ends terminal detection and assumes that the terminal is only capable of standard ANSI formatting.
+*http_proxy*, *https_proxy*, *HTTPS_PROXY*, *all_proxy*, *ALL_PROXY*, *no_proxy*, *NO_PROXY*::
+    Proxy settings honoured by libcurl for remote resource fetches.
+    See *curl(1)* for details.
 
-COLUMNS::
-    The number of character columns on screen.
-+
-mdcat only uses this variable if it fails to query the size from the underlying terminal.
+*MDCAT_LOG*::
+    Tracing filter directive. `MDCAT_LOG=trace` enables full
+    tracing; `MDCAT_LOG=mdcat::render=trace` narrows to the render
+    state machine. See the tracing-subscriber `EnvFilter`
+    documentation for full syntax.
 
-ROWS::
-    The number of character rows on screen.
-+
-mdcat only uses this variable if it fails to query the size from the underlying terminal.
+== Terminal support
 
-MDCAT_PAGER::
-    The pager program to use for `mdless` or if `--paginate` is given.
-+
-The pager program must support basic ANSI formatting sequences, like e.g. `less -r`.
-+
-The value of this variable is subject to shell-like word-splitting.
-It is **not** subject to any kind of expansion or substitution (e.g. parameter expansion, process substitution, etc.).
-+
-If set to an empty value, mdcat completely disables pagination.
+All recognised terminals render ANSI SGR styling (bold SGR 1,
+italic SGR 3, strikethrough SGR 9) and OSC 8 hyperlinks unless
+noted.
 
-PAGER::
-    The pager program to use if `$MDCAT_PAGER` is unset.
-+
-Subject to the same rules as `$MDCAT_PAGER`.
-+
-If both `$PAGER` and `$MDCAT_PAGER` are unset use `less -r` as pager.
+Inline images via the iTerm2 protocol::
 
-http_proxy::
-https_proxy::
-HTTPS_PROXY::
-all_proxy::
-ALL_PROXY::
-no_proxy::
-NO_PROXY::
-    Proxies settings for HTTP requests made by mdcat to retrieve remote resources.
-+
-mdcat uses curl for its network transfers, hence see `curl(1)` for these variables.
+* https://iterm2.com/[iTerm2] (also adds heading jump marks).
+* https://code.visualstudio.com/[VS Code] 1.80+ integrated terminal.
 
-MDCAT_LOG::
-    Directives to configure output of tracing information.
-+
-See <https://docs.rs/tracing-subscriber/latest/tracing_subscriber/struct.EnvFilter.html#directives> for syntax details; use `MDCAT_LOG=trace` for complete debugging information, and `MDCAT_LOG=pulldown_cmark_mdcat::render=trace` to trace rendering only.
+Inline images via the Kitty graphics protocol::
 
-== Conforming to
+* https://github.com/kovidgoyal/kitty[Kitty]
+* https://wezfurlong.org/wezterm/[WezTerm]
+* https://mitchellh.com/ghostty[Ghostty]
+* https://raphamorim.io/rio/[Rio]
 
-=== CommonMark support, extensions, and limitations
+Inline images via Sixel (requires the default-on `sixel` build feature)::
 
-mdcat supports version 0.30 of the https://spec.commonmark.org/[CommonMark Spec], plus https://github.github.com/gfm/#task-list-items-extension-[Task lists] and https://github.github.com/gfm/#strikethrough-extension-[strikethrough], through https://github.com/raphlinus/pulldown-cmark[pulldown-cmark].
+* https://codeberg.org/dnkl/foot[Foot]
+* https://aka.ms/terminal[Windows Terminal] (since 1.22)
+* https://contour-terminal.org/[Contour]
+* http://mlterm.sourceforge.net/[mlterm]
+* https://invisible-island.net/xterm/[xterm] (when DA1 advertises Sixel)
 
-mdcat does not yet support footnotes.
-Support for https://github.github.com/gfm/#tables-extension-[tables] is limited; text wrapping and inline markup in table cells are not yet supported.
-mdcat parses HTML blocks and inline tags but does not apply special rendering; it prints HTML as is.
+Inline images via the Terminology protocol::
 
-=== Terminal support
+* http://terminolo.gy[Terminology]
 
-Unless `--no-colour` is given, mdcat translates CommonMark text into ANSI formatted text, with standard SGR formatting codes and hyperlinks.
-It uses bold (SGR 1), italic (SGR 3) and strikethrough (SGR 9) formatting, and the standard 4-bit color sequences, as well as https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda[OSC 8] for hyperlinks.
-It does not use 8-bit or 24-bit color sequences, though this may change in future releases.
+ANSI + OSC 8 only, no inline images::
 
-Additionally, it uses proprietary escape codes if it detects one of the following terminal emulators (see sections <<Terminal detection>> and <<Environment>> for details):
-
-* https://iterm2.com/[iTerm2]: Inline images (https://iterm2.com/documentation-images.html[iTerm2 protocol]) and
-https://iterm2.com/documentation-escape-codes.html[Marks].
-* https://github.com/kovidgoyal/kitty[kitty]: Inline images (https://sw.kovidgoyal.net/kitty/graphics-protocol.html[kitty Graphics protocol]).
-* http://terminolo.gy[Terminology]: Inline images (terminology protocol).
-* https://wezfurlong.org/wezterm/[WezTerm]: Inline images (kitty graphics protocol, see above).
-* https://code.visualstudio.com/[VSCode] 1.80 or newer, integrated terminal: Inline images (iTerm2 protocol, see above)
-
-== Bugs
-
-Please report bugs to https://github.com/swsnr/mdcat/issues.
-
-Currently does not provide means to customize styles and colours.
+* https://alacritty.org/[Alacritty]
+* https://konsole.kde.org/[KDE Konsole]
+* https://support.apple.com/guide/terminal/welcome/mac[Apple Terminal] (OSC 8 on macOS 15+)
+* https://www.warp.dev/[Warp]
+* https://hyper.is/[Hyper]
 
 == Examples
 
-mdcat hello - world::
-    Render markdown in `hello`, then from standard input, then from `world`.
+*Render a file*::
+    mdcat README.md
 
-mdless hello:: Render markdown from `mdless` through a pager.
+*Read from stdin*::
+    curl -sL https://example.com/doc.md | mdcat -
+
+*Open the interactive pager at the first match*::
+    mdless --search "## Installation" README.md
+
+*Detect the terminal and capabilities*::
+    mdcat --detect-terminal
+
+*Render with a forced width and no styling*::
+    mdcat --columns 72 --no-colour README.md | pbcopy
+
+== Bugs
+
+Report bugs at https://github.com/pawelb0/mdcat/issues.
+
+Customisable themes are not yet exposed to end users; the bundled
+theme is fixed at compile time.
 
 == See also
 
-*cat(1)*, *bat(1)*
+*cat(1)*, *less(1)*, *bat(1)*
 
 == Copyright
 
-Copyright Sebastian Wiesner <sebastian@swsnr.de> and contributors
+Copyright 2018-2024 Sebastian Wiesner <sebastian@swsnr.de> and contributors +
+Copyright 2026 Pawel Boguszewski
 
-Binaries are subject to the terms of the Mozilla Public License, v. 2.0.
-See https://github.com/swsnr/mdcat/blob/main/LICENSE.
+Binaries are subject to the terms of the Mozilla Public License,
+v. 2.0. See <https://github.com/pawelb0/mdcat/blob/main/LICENSE>.
 
-Most of the source is subject to the terms of the Mozilla Public License, v. 2.0, unless otherwise noted;
-some files are subject to the terms of the Apache 2.0 license, see http://www.apache.org/licenses/LICENSE-2.0.
+Most source files use the same licence; a small number are
+dual-licensed under Apache 2.0
+(<http://www.apache.org/licenses/LICENSE-2.0>). File headers note
+the applicable licence.

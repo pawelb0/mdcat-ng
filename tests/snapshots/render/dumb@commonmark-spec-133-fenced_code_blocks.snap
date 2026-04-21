@@ -1,0 +1,12 @@
+---
+source: tests/render.rs
+assertion_line: 111
+expression: "render_to_string(markdown_file, &dumb_settings)"
+input_file: tests/markdown/commonmark-spec/133-fenced_code_blocks.md
+snapshot_kind: text
+---
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ aaa                                                                          │
+│  aaa                                                                         │
+│ aaa                                                                          │
+╰──────────────────────────────────────────────────────────────────────────────╯

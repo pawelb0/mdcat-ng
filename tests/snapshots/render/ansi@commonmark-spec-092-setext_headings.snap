@@ -1,0 +1,10 @@
+---
+source: tests/render.rs
+assertion_line: 112
+expression: "render_to_string(markdown_file, &ansi_settings)"
+input_file: tests/markdown/commonmark-spec/092-setext_headings.md
+snapshot_kind: text
+---
+[90m▌ [0m[3mFoo[0m
+
+[32m════════════════════════════════════════════════════════════════════════════════[0m

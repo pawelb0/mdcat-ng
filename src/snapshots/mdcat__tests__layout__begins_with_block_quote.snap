@@ -1,0 +1,7 @@
+---
+source: src/lib.rs
+assertion_line: 307
+expression: "render_string_dumb(\"> Hello World\").unwrap()"
+snapshot_kind: text
+---
+▌ Hello World

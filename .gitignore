@@ -1,11 +1,22 @@
+# Build artefacts
 /target/
-
 **/*.rs.bk
 
+# Manpage, generated from mdcat.1.adoc at release time.
 /mdcat.1
 
-# VSCode settings
+# Editor / OS cruft
 /.vscode/
+/.idea/
+**/.DS_Store
+*.swp
+*~
 
 # Git worktrees
 /.worktrees/
+
+# Insta snapshots pending review. Accept (mv .snap.new -> .snap) or revert.
+**/*.snap.new
+
+# Agent-facing notes. Not shipped to users; not code.
+/.claude/

@@ -1,0 +1,39 @@
+---
+source: tests/render.rs
+assertion_line: 112
+expression: "render_to_string(markdown_file, &ansi_settings)"
+input_file: tests/markdown/samples/tables.md
+snapshot_kind: text
+---
+Normal table:
+
+[32m┌──────────────┬──────────┬───────────────┬──────────────┐[0m
+[32m│[0m[1m left aligned [0m[32m│[0m[1m centered [0m[32m│[0m[1m right aligned [0m[32m│[0m[1m no alignment [0m[32m│[0m
+[32m├──────────────┼──────────┼───────────────┼──────────────┤[0m
+[32m│[0m cell         [32m│[0m   cell   [32m│[0m          cell [32m│[0m cell         [32m│[0m
+[32m│[0m cell         [32m│[0m   cell   [32m│[0m          cell [32m│[0m cell         [32m│[0m
+[32m│[0m cell         [32m│[0m   cell   [32m│[0m          cell [32m│[0m cell         [32m│[0m
+[32m└──────────────┴──────────┴───────────────┴──────────────┘[0m
+
+Table without body:
+
+[32m┌──────┐[0m
+[32m│[0m[1m head [0m[32m│[0m
+[32m├──────┤[0m
+[32m└──────┘[0m
+
+Table with empty cells:
+
+[32m┌───┬───┐[0m
+[32m│[0m[1m a [0m[32m│[0m[1m b [0m[32m│[0m
+[32m├───┼───┤[0m
+[32m│[0m   [32m│[0m   [32m│[0m
+[32m└───┴───┘[0m
+
+Inline markups in table:
+
+[32m┌───────┐[0m
+[32m│[0m[1m head  [0m[32m│[0m
+[32m├───────┤[0m
+[32m│[0m a b c [32m│[0m
+[32m└───────┘[0m

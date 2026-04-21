@@ -1,4 +1,22 @@
-# Windows, please keep my line endings alone
+# Text files normalise to LF line endings.
 * text eol=lf
 
-*.png -text
+# Binary assets — treat as opaque bytes. Never normalise newlines or
+# otherwise rewrite, or git silently corrupts them on checkout / push.
+*.png  -text binary
+*.jpg  -text binary
+*.jpeg -text binary
+*.gif  -text binary
+*.webp -text binary
+*.ico  -text binary
+*.ttf  -text binary
+*.otf  -text binary
+*.woff  -text binary
+*.woff2 -text binary
+
+# SVG is XML text but round-tripping its CRLFs would break inline <text>
+# embedding in some renderers; leave them as authored.
+*.svg  -text
+
+# Insta snapshots may embed raw ANSI escape bytes. Don't touch.
+*.snap -text
