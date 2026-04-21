@@ -1,26 +1,38 @@
 // Copyright 2018-2020 Sebastian Wiesner <sebastian@swsnr.de>
+// Copyright 2026 Pawel Boguszewski
 
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+//! Command-line argument definitions for the `mdcat` multicall binary.
+//!
+//! The binary dispatches on its `argv[0]` basename: invoking it as
+//! `mdcat` selects the `Command::Mdcat` variant, `mdless` selects
+//! `Command::Mdless`. Flags common to both subcommands live on
+//! `CommonArgs`; mode-specific flags hang off each enum variant.
+//! `Command::paging_mode` maps the final flag state to a
+//! `PagingMode` that drives the output layer in [`crate::cli`].
+
 use clap::ValueHint;
 use clap_complete::Shell;
 
+/// `-h`/`--help` footer shown below the flag list.
 fn after_help() -> &'static str {
     "See 'man 1 mdcat' for more information.
 
-mdcat can be installed as or linked to mdless,
-for automatic pagination.
+mdcat ships two binaries: `mdcat` renders to stdout, `mdless` opens
+the built-in interactive pager. clap dispatches by executable name.
 
-Report issues to <https://github.com/swsnr/mdcat>."
+Report issues to <https://github.com/pawelb0/mdcat>."
 }
 
+/// `--version` long form: version, copyright, licence pointer.
 fn long_version() -> &'static str {
     concat!(
         env!("CARGO_PKG_VERSION"),
         "
-Copyright (C) Sebastian Wiesner and contributors
+Copyright (C) Sebastian Wiesner, Pawel Boguszewski and contributors
 
 This program is subject to the terms of the Mozilla Public License,
 v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -28,47 +40,118 @@ You can obtain one at http://mozilla.org/MPL/2.0/."
     )
 }
 
+/// Top-level clap parser. Wraps the multicall subcommand dispatch.
 #[derive(Debug, clap::Parser)]
 #[command(multicall = true)]
 pub struct Args {
+    /// Subcommand selected from `argv[0]` (`mdcat` or `mdless`).
     #[command(subcommand)]
     pub command: Command,
 }
 
+/// Subcommand selected by `argv[0]`.
 #[derive(Debug, clap::Subcommand)]
 pub enum Command {
+    /// `mdcat`: render markdown to the terminal.
     #[command(version, about, after_help = after_help(), long_version = long_version())]
     Mdcat {
+        /// Flags common to both subcommands.
         #[command(flatten)]
         args: CommonArgs,
-        /// Paginate the output of mdcat with a pager like less (default for mdless).
+        /// Pipe the rendered output through `$PAGER` / `less -r`.
+        ///
+        /// Disables image protocols for the duration of the pager
+        /// session since most pagers mangle position-sensitive
+        /// escapes.
         #[arg(short, long, overrides_with = "no_pager")]
         paginate: bool,
-        /// Do not paginate output (default). Overrides an earlier --paginate.
+        /// Do not paginate output (default). Overrides a preceding `--paginate`.
         #[arg(short = 'P', long)]
         no_pager: bool,
     },
+    /// `mdless`: open the interactive markdown-aware pager.
     #[command(version, about, after_help = after_help(), long_version = long_version())]
     Mdless {
+        /// Flags common to both subcommands.
         #[command(flatten)]
         args: CommonArgs,
-        /// Do not paginate output (default for mdcat).
-        #[arg(short = 'P', long, overrides_with = "paginate")]
+        /// Skip the pager and print to stdout, like `mdcat FILE`.
+        #[arg(short = 'P', long, overrides_with_all = ["external_pager"])]
         no_pager: bool,
-        /// Paginate the output of mdcat with a pager like less (default). Overrides an earlier --no-pager.
-        #[arg(short, long)]
-        paginate: bool,
+        /// Shell out to `$PAGER` / `less -r` instead of the built-in pager.
+        ///
+        /// Preserves the 2.x `mdless` behaviour for users who prefer
+        /// their existing pager over the built-in interactive one.
+        #[arg(long)]
+        external_pager: bool,
+        /// Pattern to jump to and highlight on startup (like typing `/PATTERN`).
+        #[arg(long = "search", value_name = "PATTERN")]
+        search: Option<String>,
+        /// Force case-sensitive search (default is smart-case).
+        #[arg(long)]
+        case_sensitive: bool,
+        /// Interpret the search pattern as a regex instead of a literal.
+        #[arg(long)]
+        regex: bool,
+        /// Render to stdout without entering the pager; for the test harness.
+        #[arg(long, hide = true)]
+        render_only: bool,
+        /// Show rendered-line numbers in a left gutter. Toggle live with `#`.
+        #[arg(short = 'n', long = "line-numbers")]
+        line_numbers: bool,
     },
 }
 
+/// How `mdcat` should deliver its rendered output to the user.
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum PagingMode {
+    /// Print to stdout and exit.
+    None,
+    /// Pipe through the external `$PAGER` / `less -r` child process.
+    ExternalLess,
+    /// Run the built-in interactive markdown-aware pager.
+    Interactive,
+}
+
 impl Command {
-    pub fn paginate(&self) -> bool {
+    /// Resolve the active paging mode from the parsed flags.
+    pub fn paging_mode(&self) -> PagingMode {
         match *self {
-            // In both cases look at the option indicating the non-default
-            // behaviour; the overrides above are configured accordingly.
-            Command::Mdcat { paginate, .. } => paginate,
-            Command::Mdless { no_pager, .. } => !no_pager,
+            // mdcat: paginate only when --paginate (or -p) is set; --no-pager wins via
+            // `overrides_with` so the bool here reflects the final state.
+            Command::Mdcat { paginate, .. } => {
+                if paginate {
+                    PagingMode::ExternalLess
+                } else {
+                    PagingMode::None
+                }
+            }
+            // mdless: --no-pager → None; --external-pager → old `less -r` path;
+            // --render-only → None (same as mdcat FILE); otherwise Interactive.
+            Command::Mdless {
+                no_pager,
+                external_pager,
+                render_only,
+                ..
+            } => {
+                if no_pager || render_only {
+                    PagingMode::None
+                } else if external_pager {
+                    PagingMode::ExternalLess
+                } else {
+                    PagingMode::Interactive
+                }
+            }
         }
+    }
+}
+
+impl PagingMode {
+    /// `true` if *any* pager owns the terminal (external `less` or the
+    /// built-in interactive pager). Used to decide whether we should emit
+    /// image-protocol escapes, run active TTY probes, etc.
+    pub fn is_paginated(self) -> bool {
+        !matches!(self, PagingMode::None)
     }
 }
 
@@ -83,8 +166,8 @@ impl std::ops::Deref for Command {
     }
 }
 
+/// Flags shared by both `mdcat` and `mdless`.
 #[derive(Debug, clap::Args)]
-// #[command(author, version, about, after_help = after_help(), long_version = long_version())]
 pub struct CommonArgs {
     /// Files to read.  If - read from standard input instead.
     #[arg(default_value="-", value_hint = ValueHint::FilePath)]
@@ -95,9 +178,17 @@ pub struct CommonArgs {
     /// Maximum number of columns to use for output.
     #[arg(long)]
     pub columns: Option<u16>,
-    /// Do not load remote resources like images.
-    #[arg(short, long = "local")]
+    /// Deprecated: kept for 2.x compatibility. Local-only is now the default.
+    #[arg(short = 'l', long = "local", hide = true)]
     pub local_only: bool,
+    /// Fetch remote (HTTP/HTTPS) images for inline display.
+    ///
+    /// Off by default: remote fetches can be slow, and the tracking /
+    /// SSRF surface they open isn't something a Markdown viewer should
+    /// pay for silently. Pass this when you want images from URLs to
+    /// render inline on a capable terminal.
+    #[arg(long = "remote-images")]
+    pub remote_images: bool,
     /// Exit immediately if any error occurs processing an input file.
     #[arg(long = "fail")]
     pub fail_fast: bool,
@@ -107,9 +198,22 @@ pub struct CommonArgs {
     /// Skip terminal detection and only use ANSI formatting.
     #[arg(long = "ansi", conflicts_with = "no_colour")]
     pub ansi_only: bool,
+    /// Skip active DA1 capability probing (which is on by default for interactive TTY output).
+    #[arg(long = "no-probe-terminal")]
+    pub no_probe_terminal: bool,
+    /// Milliseconds to wait for a Primary Device Attributes (DA1) probe reply.
+    ///
+    /// Real terminals answer in 1-5 ms; the default gives a generous window
+    /// for slow SSH sessions without noticeably delaying startup. Bump this
+    /// if the probe silently falls through on a responsive-but-slow terminal.
+    #[arg(long = "probe-timeout-ms", default_value_t = 50)]
+    pub probe_timeout_ms: u64,
     /// Generate completions for a shell to standard output and exit.
     #[arg(long)]
     pub completions: Option<Shell>,
+    /// Wrap code-block lines that exceed the terminal width instead of overflowing.
+    #[arg(long = "wrap-code")]
+    pub wrap_code: bool,
 }
 
 /// What resources mdcat may access.
@@ -123,11 +227,14 @@ pub enum ResourceAccess {
 
 impl CommonArgs {
     /// Whether remote resource access is permitted.
+    ///
+    /// Local-only is the default. `--remote-images` opts in. `--local`
+    /// is kept as a no-op alias so 2.x command lines keep parsing.
     pub fn resource_access(&self) -> ResourceAccess {
-        if self.local_only {
-            ResourceAccess::LocalOnly
-        } else {
+        if self.remote_images && !self.local_only {
             ResourceAccess::Remote
+        } else {
+            ResourceAccess::LocalOnly
         }
     }
 }

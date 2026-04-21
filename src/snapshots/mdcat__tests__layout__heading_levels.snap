@@ -1,0 +1,13 @@
+---
+source: src/lib.rs
+assertion_line: 332
+expression: "render_string_dumb(\"\n# First\n\n## Second\n\n### Third\").unwrap()"
+snapshot_kind: text
+---
+First
+════════════════════════════════════════════════════════════════════════════════
+
+Second
+────────────────────────────────────────────────────────────────────────────────
+
+Third

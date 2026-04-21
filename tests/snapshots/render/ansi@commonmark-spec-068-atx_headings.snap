@@ -1,0 +1,14 @@
+---
+source: tests/render.rs
+assertion_line: 112
+expression: "render_to_string(markdown_file, &ansi_settings)"
+input_file: tests/markdown/commonmark-spec/068-atx_headings.md
+snapshot_kind: text
+---
+[1m[34mfoo[0m
+
+[1m[34mfoo[0m
+[1m[34m────────────────────────────────────────────────────────────────────────────────[0m
+
+[1m[34mfoo[0m
+[1m[34m════════════════════════════════════════════════════════════════════════════════[0m

@@ -1,100 +1,134 @@
 // Copyright 2018-2020 Sebastian Wiesner <sebastian@swsnr.de>
+// Copyright 2026 Pawel Boguszewski
 
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::{cell::RefCell, time::Duration};
+//! Access to resources referenced from markdown documents.
 
-use curl::easy::{Easy2, Handler, WriteError};
+use std::fmt::Debug;
+use std::io::{Error, ErrorKind, Result};
+
 use mime::Mime;
-use pulldown_cmark_mdcat::{
-    resources::{filter_schemes, MimeData},
-    ResourceUrlHandler,
-};
-use tracing::{event, instrument, Level};
 use url::Url;
 
-/// Handle curl data by writing into a buffer.
-#[derive(Debug, Clone, Default)]
-pub struct CollectBuffer {
-    read_limit: u64,
-    buffer: Vec<u8>,
+mod curl;
+mod file;
+pub(crate) mod image;
+pub(crate) mod prefetch;
+
+pub(crate) mod svg;
+
+pub(crate) use self::image::InlineImageProtocol;
+pub use curl::CurlResourceHandler;
+pub use file::FileResourceHandler;
+pub use prefetch::{prefetch_and_wrap, CachingResourceHandler};
+
+/// Data of a resource with associated mime type.
+#[derive(Debug, Clone)]
+pub struct MimeData {
+    /// The mime type if known.
+    pub mime_type: Option<Mime>,
+    /// The data.
+    pub data: Vec<u8>,
 }
 
-impl Handler for CollectBuffer {
-    fn write(&mut self, data: &[u8]) -> Result<usize, WriteError> {
-        if self.read_limit < (self.buffer.len() + data.len()).try_into().unwrap() {
-            // Do not handle data and tell curl that we didn't handle it;
-            // this will make curl fail with a write error
-            Ok(0)
-        } else {
-            self.buffer.extend_from_slice(data);
-            Ok(data.len())
-        }
-    }
-}
-
-/// A [`curl`]-based resource handler for [`pulldown-cmark-mdcat`].
-pub struct CurlResourceHandler {
-    easy: RefCell<Easy2<CollectBuffer>>,
-}
-
-impl CurlResourceHandler {
-    /// Create a new resource handler.
+impl MimeData {
+    /// Get the essence of the mime type, if any.
     ///
-    /// `read_limit` is the maximum amount of data to be read from a resource.
-    /// `useragent` is the value of the user agent header.
-    pub fn create(read_limit: u64, useragent: &str) -> std::io::Result<Self> {
-        let mut easy = Easy2::new(CollectBuffer {
-            buffer: Vec::new(),
-            read_limit,
-        });
-        // Use somewhat aggressive timeouts to avoid blocking rendering for long; we have graceful
-        // fallbacks since we have to support terminals without image capabilities anyways.
-
-        easy.timeout(Duration::from_secs(1))?;
-        easy.connect_timeout(Duration::from_secs(1))?;
-        easy.follow_location(true)?;
-        easy.fail_on_error(true)?;
-        easy.tcp_nodelay(true)?;
-        easy.useragent(useragent)?;
-        Ok(Self::new(easy))
-    }
-
-    /// Create a new resource handler.
-    pub fn new(easy: Easy2<CollectBuffer>) -> Self {
-        Self {
-            easy: RefCell::new(easy),
-        }
+    /// The essence is roughly the mime type without parameters.
+    pub fn mime_type_essence(&self) -> Option<&str> {
+        self.mime_type.as_ref().map(|m| m.essence_str())
     }
 }
 
-impl ResourceUrlHandler for CurlResourceHandler {
-    #[instrument(level = "debug", skip(self), fields(url = %url))]
-    fn read_resource(
-        &self,
-        url: &Url,
-    ) -> std::io::Result<pulldown_cmark_mdcat::resources::MimeData> {
-        // See https://curl.se/docs/url-syntax.html for all schemas curl supports
-        // We omit the more exotic ones :)
-        filter_schemes(&["http", "https", "ftp", "ftps", "smb"], url).and_then(|url| {
-            let mut easy = self.easy.borrow_mut();
-            easy.url(url.as_str())?;
-            easy.perform()?;
+/// Handle resource URLs.
+///
+/// See [`DispatchingResourceHandler`] for a resource handler which dispatches
+/// to a list of handlers, and [`FileResourceHandler`] for a resource handler for
+/// local files.
+///
+/// For remote URLs implement this handler on top of a suitable crate for network
+/// requests, e.q. [`reqwest`](https://docs.rs/reqwest) or [`curl`](https://docs.rs/curl).
+pub trait ResourceUrlHandler {
+    /// Read a resource.
+    ///
+    /// Read data from the given `url`, and return the data and its associated mime type if known,
+    /// or any IO error which occurred while reading from the resource.
+    ///
+    /// Alternatively, return an IO error with [`ErrorKind::Unsupported`] to indicate that the
+    /// given `url` is not supported by this resource handler.  In this case a higher level
+    /// resource handler may try a different handler.
+    fn read_resource(&self, url: &Url) -> Result<MimeData>;
+}
 
-            let mime_type = easy.content_type()?.and_then(|content_type| {
-                event!(
-                    Level::DEBUG,
-                    "Raw Content-Type of remote resource {}: {:?}",
-                    &url,
-                    content_type
-                );
-                content_type.parse::<Mime>().ok()
-            });
-            let data = easy.get_ref().buffer.clone();
-            easy.get_mut().buffer.clear();
-            Ok(MimeData { mime_type, data })
-        })
+impl<R: ResourceUrlHandler + ?Sized> ResourceUrlHandler for &'_ R {
+    fn read_resource(&self, url: &Url) -> Result<MimeData> {
+        (*self).read_resource(url)
+    }
+}
+
+/// Filter by URL scheme.
+///
+/// Return `Ok(url)` if `url` has the given `scheme`, otherwise return an IO error with error kind
+/// [`ErrorKind::Unsupported`].
+pub fn filter_schemes<'a>(schemes: &[&str], url: &'a Url) -> Result<&'a Url> {
+    if schemes.contains(&url.scheme()) {
+        Ok(url)
+    } else {
+        Err(Error::new(
+            ErrorKind::Unsupported,
+            format!("Unsupported scheme in {url}, expected one of {schemes:?}"),
+        ))
+    }
+}
+
+/// A resource handler which dispatches reading among a list of inner handlers.
+pub struct DispatchingResourceHandler {
+    /// Inner handlers.
+    handlers: Vec<Box<dyn ResourceUrlHandler>>,
+}
+
+impl DispatchingResourceHandler {
+    /// Create a new handler wrapping all given `handlers`.
+    pub fn new(handlers: Vec<Box<dyn ResourceUrlHandler>>) -> Self {
+        Self { handlers }
+    }
+}
+
+impl ResourceUrlHandler for DispatchingResourceHandler {
+    /// Read from the given resource `url`.
+    ///
+    /// Try every inner handler one after another, while handlers return an
+    /// [`ErrorKind::Unsupported`] IO error.  For any other error abort and return the error.
+    ///
+    /// Return the first different result, i.e. either data read or another error.
+    fn read_resource(&self, url: &Url) -> Result<MimeData> {
+        for handler in &self.handlers {
+            match handler.read_resource(url) {
+                Ok(data) => return Ok(data),
+                Err(error) if error.kind() == ErrorKind::Unsupported => {}
+                Err(error) => return Err(error),
+            }
+        }
+        Err(Error::new(
+            ErrorKind::Unsupported,
+            format!("No handler supported reading from {url}"),
+        ))
+    }
+}
+
+/// A resource handler which doesn't read anything.
+#[derive(Debug, Clone, Copy)]
+pub struct NoopResourceHandler;
+
+impl ResourceUrlHandler for NoopResourceHandler {
+    /// Always return an [`ErrorKind::Unsupported`] error.
+    fn read_resource(&self, url: &Url) -> Result<MimeData> {
+        Err(Error::new(
+            ErrorKind::Unsupported,
+            format!("Reading from resource {url} is not supported"),
+        ))
     }
 }

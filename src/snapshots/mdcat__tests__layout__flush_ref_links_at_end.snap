@@ -1,0 +1,16 @@
+---
+source: src/lib.rs
+assertion_line: 365
+expression: "render_string_dumb(\"Hello [World](http://example.com/world)\n\n# Headline\n\nHello [Donald](http://example.com/Donald)\").unwrap()"
+snapshot_kind: text
+---
+Hello World[1]
+
+[1]: http://example.com/world
+
+Headline
+════════════════════════════════════════════════════════════════════════════════
+
+Hello Donald[2]
+
+[2]: http://example.com/Donald

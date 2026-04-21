@@ -1,0 +1,11 @@
+---
+source: tests/render.rs
+assertion_line: 113
+expression: "render_to_string(markdown_file, &iterm2_settings)"
+input_file: tests/markdown/commonmark-spec/227-blank_lines.md
+snapshot_kind: text
+---
+aaa
+
+]1337;SetMark\[1m[34maaa[0m
+[1m[34m════════════════════════════════════════════════════════════════════════════════[0m

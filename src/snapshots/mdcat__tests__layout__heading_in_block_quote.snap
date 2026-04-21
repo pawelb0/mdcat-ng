@@ -1,0 +1,10 @@
+---
+source: src/lib.rs
+assertion_line: 322
+expression: "render_string_dumb(\"> Hello World\n\n> # Hello World\").unwrap()"
+snapshot_kind: text
+---
+▌ Hello World
+
+  Hello World
+════════════════════════════════════════════════════════════════════════════════

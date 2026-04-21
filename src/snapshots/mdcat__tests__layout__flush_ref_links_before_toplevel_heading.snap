@@ -1,0 +1,15 @@
+---
+source: src/lib.rs
+assertion_line: 353
+expression: "render_string_dumb(\"> Hello [World](http://example.com/world)\n\n> # No refs before this headline\n\n# But before this\").unwrap()"
+snapshot_kind: text
+---
+▌ Hello World[1]
+
+  No refs before this headline
+════════════════════════════════════════════════════════════════════════════════
+
+[1]: http://example.com/world
+
+But before this
+════════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,8 @@
+---
+source: tests/render.rs
+assertion_line: 113
+expression: "render_to_string(markdown_file, &iterm2_settings)"
+input_file: tests/markdown/commonmark-spec/093-setext_headings.md
+snapshot_kind: text
+---
+[90m▌ [0m[3mfoo[0m[3m bar[0m[3m ===[0m

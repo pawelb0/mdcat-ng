@@ -1,0 +1,20 @@
+---
+source: tests/render.rs
+assertion_line: 111
+expression: "render_to_string(markdown_file, &dumb_settings)"
+input_file: tests/markdown/commonmark-spec/191-html_blocks.md
+snapshot_kind: text
+---
+<table>
+
+  <tr>
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ <td>                                                                         │
+│   Hi                                                                         │
+│ </td>                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+  </tr>
+
+</table>

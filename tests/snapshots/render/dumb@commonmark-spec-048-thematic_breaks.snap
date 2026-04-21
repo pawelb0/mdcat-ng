@@ -1,0 +1,10 @@
+---
+source: tests/render.rs
+assertion_line: 111
+expression: "render_to_string(markdown_file, &dumb_settings)"
+input_file: tests/markdown/commonmark-spec/048-thematic_breaks.md
+snapshot_kind: text
+---
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ***                                                                          │
+╰──────────────────────────────────────────────────────────────────────────────╯
