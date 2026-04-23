@@ -136,6 +136,14 @@ rustix = { version = "1.1.4", default-features = false, features = ["std", "term
 anstyle-query = { version = "1.1.5", default-features = false }
 terminal_size = "0.4.4"
 
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/mdcat-ng-{ version }/mdcat-ng-{ version }-{ target }{ archive-suffix }"
+bin-dir = "mdcat-ng-{ version }-{ target }/{ bin }{ binary-ext }"
+pkg-fmt = "tgz"
+
+[package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
+pkg-fmt = "zip"
+
 [package.metadata.release]
 release = true
 pre-release-replacements = [
