@@ -22,7 +22,6 @@ use crate::render::state::*;
 use crate::terminal::capabilities::{MarkCapability, StyleCapability, TerminalCapabilities};
 use crate::terminal::osc::{clear_link, set_link_url};
 use crate::terminal::TerminalSize;
-use crate::theme::CombineStyle;
 use crate::Theme;
 use crate::{Environment, Settings};
 
@@ -459,14 +458,13 @@ pub fn write_start_code_block<W: Write>(
         language,
     )?;
 
+    // Fenced blocks with a known language go through syntect. Everything
+    // else — no language, unknown language, indented blocks, or a dumb
+    // terminal — renders with the ambient paragraph style so the body
+    // doesn't turn into a wall of one colour.
     match (&settings.terminal_capabilities.style, block_kind) {
         (Some(StyleCapability::Ansi), CodeBlockKind::Fenced(name)) if !name.is_empty() => {
             match settings.syntax_set.find_syntax_by_token(&name) {
-                None => Ok(LiteralBlockAttrs {
-                    indent,
-                    style: settings.theme.code_style.on_top_of(&style),
-                }
-                .into()),
                 Some(syntax) => {
                     let parse_state = ParseState::new(syntax);
                     let highlight_state = HighlightState::new(highlighter(), ScopeStack::new());
@@ -477,13 +475,10 @@ pub fn write_start_code_block<W: Write>(
                     }
                     .into())
                 }
+                None => Ok(LiteralBlockAttrs { indent, style }.into()),
             }
         }
-        (_, _) => Ok(LiteralBlockAttrs {
-            indent,
-            style: settings.theme.code_style.on_top_of(&style),
-        }
-        .into()),
+        (_, _) => Ok(LiteralBlockAttrs { indent, style }.into()),
     }
 }
 

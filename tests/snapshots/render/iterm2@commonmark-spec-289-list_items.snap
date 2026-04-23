@@ -1,15 +1,14 @@
 ---
 source: tests/render.rs
-assertion_line: 113
+assertion_line: 116
 expression: "render_to_string(markdown_file, &iterm2_settings)"
 input_file: tests/markdown/commonmark-spec/289-list_items.md
-snapshot_kind: text
 ---
 [32m╭──────────────────────────────────────────────────────────────────────────────╮[0m
-[32m│ [0m[33m1.  A paragraph[0m                                                             [32m │[0m
-[32m│ [0m[33m    with two lines.[0m                                                         [32m │[0m
-[32m│ [0m[33m[0m                                                                            [32m │[0m
-[32m│ [0m[33m        indented code[0m                                                       [32m │[0m
-[32m│ [0m[33m[0m                                                                            [32m │[0m
-[32m│ [0m[33m    > A block quote.[0m                                                        [32m │[0m
+[32m│ [0m1.  A paragraph                                                             [32m │[0m
+[32m│ [0m    with two lines.                                                         [32m │[0m
+[32m│ [0m                                                                            [32m │[0m
+[32m│ [0m        indented code                                                       [32m │[0m
+[32m│ [0m                                                                            [32m │[0m
+[32m│ [0m    > A block quote.                                                        [32m │[0m
 [32m╰──────────────────────────────────────────────────────────────────────────────╯[0m

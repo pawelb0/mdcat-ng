@@ -1,16 +1,15 @@
 ---
 source: tests/render.rs
-assertion_line: 113
+assertion_line: 116
 expression: "render_to_string(markdown_file, &iterm2_settings)"
 input_file: tests/markdown/samples/code_blocks.md
-snapshot_kind: text
 ---
 Code blocks without syntax highlighting:
 
 [32m╭──────────────────────────────────────────────────────────────────────────────╮[0m
-[32m│ [0m[33mSome plain[0m                                                                  [32m │[0m
-[32m│ [0m[33mcode block[0m                                                                  [32m │[0m
-[32m│ [0m[33m   fooo[0m                                                                     [32m │[0m
+[32m│ [0mSome plain                                                                  [32m │[0m
+[32m│ [0mcode block                                                                  [32m │[0m
+[32m│ [0m   fooo                                                                     [32m │[0m
 [32m╰──────────────────────────────────────────────────────────────────────────────╯[0m
 
 Or with syntax highlighting, eg, Rust:
