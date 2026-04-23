@@ -432,10 +432,6 @@ fn render_doc(
 }
 
 /// ANSI styling + OSC 8 links, no image protocols.
-///
-/// The pager scrolls, which invalidates position-sensitive image
-/// escapes; fall back to the renderer's "describe image as a link"
-/// path instead.
 fn ansi_without_images() -> TerminalCapabilities {
     let mut caps = TerminalProgram::Ansi.capabilities();
     caps.image = None;
