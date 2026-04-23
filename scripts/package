@@ -14,12 +14,17 @@ ARCHIVE_NAME="mdcat-ng-${VERSION}-${TARGET}"
 
 package_windows() {
     local archive_file
+    local staging
     archive_file="${ARCHIVE_NAME}.zip"
+    staging="${ARCHIVE_NAME}"
     mv LICENSE LICENSE.txt
-    7z a "${archive_file}" \
-        "./target/${TARGET}/release/mdcat.exe" \
-        "./target/${TARGET}/release/mdless.exe" \
-        ./README.md ./CHANGELOG.md ./LICENSE.txt ./mdcat.1.adoc
+    mkdir -p "${staging}"
+    cp "target/${TARGET}/release/mdcat.exe" \
+        "target/${TARGET}/release/mdless.exe" \
+        README.md CHANGELOG.md LICENSE.txt mdcat.1.adoc \
+        "${staging}/"
+    7z a "${archive_file}" "${staging}"
+    rm -rf "${staging}"
     if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
         echo "file=${archive_file}" >>"${GITHUB_OUTPUT}"
         echo "name=${ARCHIVE_NAME}.zip" >>"${GITHUB_OUTPUT}"

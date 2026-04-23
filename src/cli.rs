@@ -4,7 +4,7 @@
 
 //! Shared CLI entry point for both binaries.
 //!
-//! `src/main.rs` and `src/bin/mdless.rs` are shims into [`run`].
+//! `src/main.rs` and `src/bin/mdless.rs` are shims into `run`.
 //! clap's multicall mode picks the subcommand from `argv[0]`.
 
 use clap::{CommandFactory, Parser};
