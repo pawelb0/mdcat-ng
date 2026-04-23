@@ -213,22 +213,23 @@ pub(super) fn handle_highlight_text<'a, W: Write>(
 ) -> Result<StateAndData<StateData<'a>>> {
     let inner_width = code_block_inner_width(&settings.terminal_size, attrs.indent) as usize;
     for line in LinesWithEndings::from(&text) {
-        let trailing_newline = line.ends_with('\n');
-        let content = if trailing_newline {
-            &line[..line.len() - 1]
-        } else {
-            line
-        };
-
+        // Pass the line to syntect with its trailing newline intact so
+        // shell comments and other line-terminated scopes close properly.
+        // Strip the newline off the last segment before rendering.
         let ops = attrs
             .parse_state
-            .parse_line(content, settings.syntax_set)
+            .parse_line(line, settings.syntax_set)
             .expect("syntect parsing shouldn't fail in mdcat");
-        // Collect segments so we can either emit them directly or rewrap
-        // without losing highlighting state.
-        let segments: Vec<(syntect::highlighting::Style, &str)> =
-            HighlightIterator::new(&mut attrs.highlight_state, &ops, content, highlighter())
-                .collect();
+        let mut segments: Vec<(syntect::highlighting::Style, &str)> =
+            HighlightIterator::new(&mut attrs.highlight_state, &ops, line, highlighter()).collect();
+        if let Some((_, last)) = segments.last_mut() {
+            if let Some(stripped) = last.strip_suffix('\n') {
+                *last = stripped;
+            }
+        }
+        if segments.last().is_some_and(|(_, s)| s.is_empty()) {
+            segments.pop();
+        }
         let line_width: usize = segments.iter().map(|(_, s)| display_width(s)).sum();
         let needs_wrap = settings.wrap_code && line_width > inner_width;
 
