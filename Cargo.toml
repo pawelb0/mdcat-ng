@@ -1,26 +1,34 @@
 [package]
-name = "mdcat"
-description = "cat for markdown: Show markdown documents in terminals"
+name = "mdcat-ng"
+description = "cat for markdown: show markdown documents in terminals"
 readme = "README.md"
-documentation = "https://docs.rs/mdcat"
+documentation = "https://docs.rs/mdcat-ng"
 keywords = ["markdown", "less", "cat"]
-homepage = "https://github.com/pawelb0/mdcat"
-repository = "https://github.com/pawelb0/mdcat"
-version = "3.0.0-alpha.0"
+homepage = "https://github.com/pawelb0/mdcat-ng"
+repository = "https://github.com/pawelb0/mdcat-ng"
+version = "0.2.0"
 categories = ["command-line-utilities", "text-processing"]
 license = "MPL-2.0 AND Apache-2.0"
 authors = ["Sebastian Wiesner <sebastian@swsnr.de>"]
 edition = "2021"
 rust-version = "1.83"
 
-# Standalone package: no workspace members after consolidating pulldown-cmark-mdcat.
 [workspace]
 
-# Binary targets are auto-discovered: `src/main.rs` → `mdcat`, and any
-# file under `src/bin/` → its own binary. `src/bin/mdless.rs` shares
-# the implementation in `crate::cli`; clap's multicall picks the
-# subcommand from argv[0], so the two binaries compile cheaply and
-# dispatch correctly without symlinks.
+# Crate is `mdcat-ng` but the binaries keep the familiar `mdcat` /
+# `mdless` names. Clap's multicall dispatches on argv[0], so the two
+# entry points share one code path instead of being separate crates.
+[lib]
+name = "mdcat"
+path = "src/lib.rs"
+
+[[bin]]
+name = "mdcat"
+path = "src/main.rs"
+
+[[bin]]
+name = "mdless"
+path = "src/bin/mdless.rs"
 
 # Release tuning. LTO measurably did nothing on this codebase —
 # mdcat is already inlined tightly per-crate and the hot paths
@@ -137,13 +145,13 @@ pre-release-replacements = [
     # Update the changelog
     { file="CHANGELOG.md", search="## \\[Unreleased\\]", replace = "## [Unreleased]\n\n## [{{version}}] – {{date}}", exactly = 1 },
     { file="CHANGELOG.md", search="HEAD", replace = "{{tag_name}}", exactly = 1 },
-    { file="CHANGELOG.md", search="\\[Unreleased\\]: ", replace = "[Unreleased]: https://github.com/pawelb0/mdcat/compare/{{tag_name}}...HEAD\n[{{version}}]: ", exactly = 1 },
+    { file="CHANGELOG.md", search="\\[Unreleased\\]: ", replace = "[Unreleased]: https://github.com/pawelb0/mdcat-ng/compare/{{tag_name}}...HEAD\n[{{version}}]: ", exactly = 1 },
 ]
 allow-branch = ["main"]
 pre-release-commit-message = "Release {{version}}"
-tag-prefix = "mdcat-"
+tag-prefix = "mdcat-ng-"
 tag-name = "{{prefix}}{{version}}"
-tag-message = "mdcat {{version}}"
+tag-message = "mdcat-ng {{version}}"
 sign-tag = true
 # Github CI does this for us.
 verify = false

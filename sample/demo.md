@@ -1,7 +1,7 @@
-# mdcat 3.0
+# mdcat-ng 0.2
 
 **Fancy `cat` for CommonMark — with inline images, OSC 8 links,
-GFM alerts, footnotes, and a markdown-aware interactive pager.**
+GFM alerts, footnotes, and a markdown-aware interactive viewer.**
 
 ## Syntax highlighting across languages
 
@@ -85,10 +85,10 @@ func stripAnsi(b []byte) []byte {
 
 ## A tight feature matrix
 
-| Capability            | 2.x | **3.0** | Notes                         |
+| Capability            | 2.x | **0.2** | Notes                         |
 |:----------------------|:---:|:-------:|:------------------------------|
 | Inline images         |  ✓  |  **✓**  | iTerm2, Kitty, Sixel, …       |
-| Interactive pager     |     |  **✓**  | vi keys, search, bookmarks    |
+| Interactive viewer    |     |  **✓**  | vi keys, search, bookmarks    |
 | GFM alerts            |     |  **✓**  | NOTE / TIP / WARNING / …      |
 | Footnotes             |     |  **✓**  | Refs + bottom-of-doc bodies   |
 | Definition lists      |     |  **✓**  |                               |
@@ -101,14 +101,14 @@ func stripAnsi(b []byte) []byte {
 > mdcat tags alert blockquotes with a coloured label you can see.
 
 > [!TIP]
-> Run `mdless FILE` for the built-in interactive pager.
+> Run `mdless FILE` for the built-in interactive viewer.
 
 > [!WARNING]
-> Image protocols are stripped inside pagers — scrolling is safe.
+> Image protocols are stripped inside `mdless` — scrolling is safe.
 
 ## Task lists track progress
 
-- [x] Ship the interactive pager (`mdless`)
+- [x] Ship the interactive viewer (`mdless`)
 - [x] Land markdown extensions
 - [x] Record a demo worth watching
 - [ ] Sleep
@@ -128,16 +128,16 @@ resvg
 
 Click the names: [[HomePage]] or [[Installation|installation docs]]
 render as OSC 8 hyperlinks. Inline references surface in the
-body[^pager] and collect their bodies[^repo] at the bottom of the
+body[^mdless] and collect their bodies[^repo] at the bottom of the
 document.
 
 [^py]: The `dataclasses` decorator landed in 3.7; `frozen=True`
       makes instances hashable and immutable.
 [^sql]: The query tallies how many footnote references point at
       each heading — useful for finding popular sections.
-[^pager]: `mdless` turns the same document into an interactive pager
+[^mdless]: `mdless` turns the same document into an interactive view
       with search, jumps, bookmarks, and a TOC modal.
-[^repo]: Source: https://github.com/pawelb0/mdcat
+[^repo]: Source: https://github.com/pawelb0/mdcat-ng
 
 ---
 

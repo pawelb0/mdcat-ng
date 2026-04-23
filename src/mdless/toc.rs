@@ -1,27 +1,11 @@
-// Copyright 2026 Pawel Boguszewski
-//
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-//! Table-of-contents modal for the interactive pager.
+//! TOC modal.
 //!
-//! This file contains:
-//!
-//! - [`Toc`] — modal state: which heading index is currently
-//!   highlighted. `j` / `k` move the selection, `Enter` activates,
-//!   `Esc` closes.
-//! - [`Toc::draw`] — paints the heading list as a full-frame
-//!   overlay, reverse-video on the selected row, scrolling the
-//!   list so the selection stays visible.
-//!
-//! How it fits: the dispatch layer in `mdless::mod` holds an
-//! `Option<Toc>`. Pressing `T` toggles the option; while it's
-//! `Some`, scroll-style keystrokes move the selection instead of
-//! the viewport, and `Enter` scrolls the body to the selected
-//! heading via `view::scroll_to`. Entries come from
-//! [`buffer::HeadingEntry`](super::buffer::HeadingEntry), populated
-//! at render time by the [`HeadingRecorder`](super::buffer::HeadingRecorder).
+//! [`Toc`] tracks the selected heading. Entries are
+//! [`HeadingEntry`]s from the render pass.
 
 use std::io::{self, Write};
 

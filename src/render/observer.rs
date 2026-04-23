@@ -1,32 +1,12 @@
-// Copyright 2026 Pawel Boguszewski
-//
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-//! Observer hook for the render pipeline.
+//! Observer hook.
 //!
-//! This file contains:
-//!
-//! - [`RenderObserver`] — the trait a caller implements to watch
-//!   the render pipeline. Its single method receives each
-//!   pulldown-cmark [`Event`] paired with the output writer's
-//!   current byte offset, called *before* the event is rendered.
-//! - [`NoopObserver`] — a zero-cost implementation that ignores
-//!   every call. Used by the default [`push_tty`](crate::push_tty)
-//!   path so callers without structural-position needs pay nothing.
-//! - A blanket impl so `&mut O: RenderObserver` forwards to the
-//!   underlying observer.
-//!
-//! How it fits:
-//! [`push_tty_with_observer`](crate::push_tty_with_observer) runs
-//! the standard render state machine, wrapped in a
-//! [`CountingWriter`](super::CountingWriter) so the byte offset
-//! stays exact across partial writes. Before each event is
-//! dispatched it calls `observer.on_event(offset, event)`. The
-//! interactive pager's `HeadingRecorder` is the main consumer —
-//! it maps heading events to byte offsets so `]]` / `[[` and the
-//! TOC modal can jump into the rendered document by line.
+//! [`push_tty_with_observer`](crate::push_tty_with_observer) calls
+//! `on_event(byte_offset, event)` before each pulldown-cmark event.
+//! The default [`NoopObserver`] compiles away.
 
 use pulldown_cmark::Event;
 

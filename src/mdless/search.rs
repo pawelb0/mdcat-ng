@@ -1,36 +1,12 @@
-// Copyright 2026 Pawel Boguszewski
-//
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-//! Pattern search over the document.
+//! Regex search over the rendered document.
 //!
-//! This file contains:
-//!
-//! - [`SearchState`] — the compiled query, the full list of matches,
-//!   and a cursor that `n` / `N` advance through. Built once per
-//!   committed query and dropped when the user clears highlights
-//!   with `Esc`.
-//! - [`Match`] — one hit, carrying both the plain-buffer byte range
-//!   (what the regex matched) and the styled-buffer byte range
-//!   (what [`highlight`](super::highlight) wraps in SGR).
-//! - [`CaseMode`] and [`Direction`] — the case-sensitivity policy
-//!   and the forward/backward cycle direction.
-//! - [`SearchState::compile`] — build the state from a pattern + a
-//!   [`RenderedDoc`]. Runs the regex
-//!   against the ANSI-stripped plain buffer, then translates every
-//!   match range into the parallel styled range using the
-//!   line-start indexes from `buffer.rs`.
-//!
-//! How it fits: the dispatch layer in `mdless::mod` owns an
-//! `Option<SearchState>`. `/pattern` or `--search pattern`
-//! replaces it via `compile`; `n` / `N` call `step`;
-//! [`view`](super::view) reads the match list each frame and hands
-//! it to [`highlight`](super::highlight) for inline rendering.
-//! Escape sequences are skipped during the plain-to-styled mapping
-//! so a match starting just after an SGR boundary lands on the
-//! visible byte, not on the introducer.
+//! [`SearchState`] matches against the plain buffer and maps hits
+//! to styled byte ranges, skipping SGR introducers so highlights
+//! land on visible bytes.
 
 use std::ops::Range;
 

@@ -1,48 +1,13 @@
-// Copyright 2026 Pawel Boguszewski
-//
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-//! The `mdless` interactive pager.
+//! Interactive `mdless` viewer.
 //!
-//! This module is the root of the pager. It wires every other
-//! submodule into one event loop and exposes [`run`] as the single
-//! entry point the CLI calls.
-//!
-//! What's in this file:
-//!
-//! - [`run`] — full-frame pager. Renders the document once with
-//!   `push_tty`, enters the alternate screen in raw mode, then
-//!   loops on crossterm events until the user quits.
-//! - [`MdlessOptions`] — the shape of the pager-specific CLI flags
-//!   (initial search pattern, case mode, regex mode, line-number
-//!   gutter toggle).
-//! - `Session` — mutable runtime state passed between the event
-//!   loop and the dispatch helpers: current `View`, `Decoder`,
-//!   `SearchState`, TOC modal state, bookmark register table,
-//!   status-bar text.
-//! - Private helpers: `dispatch_cmd` routes each decoded
-//!   `Command` to the right subsystem;
-//!   `apply_search`, `step_search`, `jump_heading` mutate the
-//!   `Session` in place; `TerminalGuard` handles raw-mode enter
-//!   / leave + panic recovery.
-//!
-//! Submodule roles:
-//!
-//! - [`buffer`] — pre-rendered document, line indexes, heading table.
-//! - [`keys`] — key-event → `Command` decoder.
-//! - [`view`] — viewport state + draw loop.
-//! - [`search`] — pattern compilation + match cursor.
-//! - [`highlight`] — per-line SGR splicing for match highlights.
-//! - [`toc`] — table-of-contents modal.
-//!
-//! The pager renders the document once and keeps the bytes in
-//! memory for the session. Image protocols are disabled at render
-//! time so scrolling can't retrigger position-sensitive escapes.
-//!
-//! Most of the interesting logic lives in the submodules; this
-//! file is mostly glue.
+//! [`run`] renders the document once with `push_tty`, enters the
+//! alternate screen, and loops on crossterm events. Submodules
+//! carry the real work: [`buffer`], [`keys`], [`view`], [`search`],
+//! [`highlight`], [`toc`].
 
 pub mod buffer;
 pub mod highlight;
@@ -57,7 +22,7 @@ use std::path::Path;
 
 use anyhow::{Context, Result};
 use crossterm::cursor::{Hide, Show};
-use crossterm::event::{self, Event, KeyEvent};
+use crossterm::event::{self, Event};
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, size, EnterAlternateScreen, LeaveAlternateScreen,
 };
@@ -120,12 +85,6 @@ impl Session {
     fn current_match(&self) -> Option<&search::Match> {
         self.search.as_ref().and_then(SearchState::current)
     }
-
-    fn clear_search(&mut self) {
-        self.search = None;
-        self.input.clear();
-        self.status = None;
-    }
 }
 
 /// Render `filename` and drive the interactive pager until the user quits.
@@ -171,7 +130,8 @@ pub fn run(
     loop {
         match event::read()? {
             Event::Key(key) if key.kind == event::KeyEventKind::Press => {
-                if dispatch(&mut session, key) {
+                let cmd = session.decoder.feed(key);
+                if dispatch_cmd(&mut session, cmd) {
                     break;
                 }
                 draw(&session, &mut out)?;
@@ -186,16 +146,7 @@ pub fn run(
     Ok(0)
 }
 
-/// Decode `key` and hand the resulting command to [`dispatch_cmd`].
-fn dispatch(s: &mut Session, key: KeyEvent) -> bool {
-    let cmd = s.decoder.feed(key);
-    dispatch_cmd(s, cmd)
-}
-
-/// Act on a decoded command. Returns `true` to quit the event loop.
-///
-/// Split from [`dispatch`] so tests can drive the session with a
-/// pre-built decoder and skip the raw KeyEvent stream.
+/// Act on one decoded [`Command`]. Returns `true` when the pager should quit.
 fn dispatch_cmd(s: &mut Session, cmd: Command) -> bool {
     if s.toc.is_some() {
         return dispatch_toc(s, cmd);
@@ -230,7 +181,9 @@ fn dispatch_cmd(s: &mut Session, cmd: Command) -> bool {
             false
         }
         Command::SearchCancel | Command::ClearHighlights => {
-            s.clear_search();
+            s.search = None;
+            s.input.clear();
+            s.status = None;
             false
         }
         Command::SearchNext => {
@@ -370,78 +323,68 @@ fn prompt_for(dir: SearchDirection) -> &'static str {
     }
 }
 
-/// Compile `pattern` against the current document, jump to the first match
-/// in the active direction, and update the status text.
+/// Compile `pattern`, jump to the first match, update the status text.
 fn apply_search(s: &mut Session, pattern: String) {
-    match SearchState::compile(&s.doc, &pattern, s.regex, s.case) {
-        Ok(mut state) => {
-            let initial_dir = match s.direction {
-                SearchDirection::Forward => Direction::Forward,
-                SearchDirection::Backward => Direction::Backward,
-            };
-            let jump_line = state
-                .current()
-                .map(|m| m.line)
-                .or_else(|| state.step(initial_dir).map(|(m, _)| m.line));
-            let total = state.len();
-            s.search = Some(state);
-            s.status = Some(if total == 0 {
-                format!("Pattern not found: {pattern}")
-            } else {
-                format!("{total} matches  n/N:next/prev  Esc:clear")
-            });
-            if let Some(line) = jump_line {
-                s.view.scroll_to(line, &s.doc);
-            }
-        }
+    let mut state = match SearchState::compile(&s.doc, &pattern, s.regex, s.case) {
+        Ok(state) => state,
         Err(error) => {
             s.status = Some(format!("{error}"));
+            return;
         }
+    };
+    let initial = match s.direction {
+        SearchDirection::Forward => Direction::Forward,
+        SearchDirection::Backward => Direction::Backward,
+    };
+    let jump = state
+        .current()
+        .map(|m| m.line)
+        .or_else(|| state.step(initial).map(|(m, _)| m.line));
+    let total = state.len();
+    s.search = Some(state);
+    s.status = Some(if total == 0 {
+        format!("Pattern not found: {pattern}")
+    } else {
+        format!("{total} matches  n/N:next/prev  Esc:clear")
+    });
+    if let Some(line) = jump {
+        s.view.scroll_to(line, &s.doc);
     }
 }
 
-/// Advance the match cursor, then scroll so the new match is visible.
+/// Advance the match cursor and scroll so the new match is visible.
 fn step_search(s: &mut Session, dir: Direction) {
     let Some(state) = s.search.as_mut() else {
         return;
     };
     if let Some((m, wrapped)) = state.step(dir) {
-        let line = m.line;
         if wrapped {
             s.status = Some("search wrapped".to_string());
         }
-        s.view.scroll_to(line, &s.doc);
+        s.view.scroll_to(m.line, &s.doc);
     }
 }
 
-/// One draw call: delegates to [`View::draw`] or [`View::draw_toc`].
-///
-/// Pulled into a helper so the main loop + resize handler share one path
-/// and nobody forgets to thread matches/current/status.
+/// Emit the next frame — body or TOC modal, depending on session state.
 fn draw<W: Write>(s: &Session, out: &mut W) -> io::Result<()> {
-    if let Some(toc) = s.toc.as_ref() {
-        s.view.draw_toc(out, &s.doc.headings, toc)
-    } else {
-        s.view.draw(
+    match s.toc.as_ref() {
+        Some(toc) => s.view.draw_toc(out, &s.doc.headings, toc),
+        None => s.view.draw(
             out,
             &s.doc,
             s.matches(),
             s.current_match(),
             s.status.as_deref(),
-        )
+        ),
     }
 }
 
-/// Build the rendered buffer + heading index for `filename`.
-///
-/// Wraps `push_tty_with_observer` and forces `image = None` so the pager
-/// never emits image escapes (they don't survive scrolling).
-/// Upper bound on rendered-column width for wide terminals.
-///
-/// Prose and code fences wider than ~120 columns read as a wall of
-/// text. `--columns` overrides the cap when edge-to-edge is wanted.
+/// Cap rendered lines at ~120 columns on wide terminals; prose and code
+/// fences past that wrap into a wall of text. `--columns` overrides.
 const MAX_RENDER_COLS: u16 = 120;
 
+/// Render the document once with image protocols disabled and return the
+/// pager's in-memory buffer.
 fn render_doc(
     filename: &str,
     common: &CommonArgs,

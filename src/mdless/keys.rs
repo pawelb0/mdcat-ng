@@ -1,135 +1,84 @@
-// Copyright 2026 Pawel Boguszewski
-//
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-//! Keystroke decoder for the interactive pager.
+//! Keystroke decoder.
 //!
-//! This file contains:
-//!
-//! - [`Command`] — the enum of every user intent the pager acts on
-//!   (scroll, search, bookmark, TOC, …). The rest of the pager
-//!   dispatches on this enum and never sees raw `KeyEvent`s.
-//! - [`SearchDirection`] — the forward / backward direction carried
-//!   with search commands.
-//! - [`Decoder`] — a small state machine that turns crossterm key
-//!   events into [`Command`]s. It holds the pending prefixes
-//!   (numeric count, `g` for the `gg` digraph, `[`/`]` for heading
-//!   hops, `m`/`'` for bookmark registers) and the search-input
-//!   flag.
-//!
-//! How it fits: `mdless::run` owns a single `Decoder`. Every key
-//! event from crossterm is fed into `Decoder::feed`, which returns
-//! one [`Command`]. The dispatch module routes that command to
-//! [`view`](super::view), [`search`](super::search),
-//! [`toc`](super::toc), or the bookmark table. Nothing else in the
-//! pager reads `KeyEvent` directly — this file is the only place
-//! raw keystrokes exist.
+//! [`KeyEvent`] in, [`Command`] out. [`Decoder`] tracks pending
+//! prefixes (`gg`, `]]`, `m{reg}`, numeric counts, search input).
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 /// One user intent produced by key decoding.
 ///
-/// `Quit` leaves the event loop. `Redraw` is emitted when the terminal
-/// is resized. `Noop` lets us keep the main loop simple — unknown keys
-/// map to a no-op command rather than a special `Option::None`.
+/// `Noop` means "unrecognised input"; unknown keys map to this instead
+/// of a separate `Option::None` so the event loop stays linear.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[allow(missing_docs)]
 pub enum Command {
-    /// Unrecognised input; event loop ignores it.
     Noop,
-    /// Leave the pager.
     Quit,
-    /// Redraw the current frame (triggered by `Ctrl+L` or resize).
     Redraw,
-    /// Scroll forward `n` rendered lines.
     ScrollDown(u16),
-    /// Scroll backward `n` rendered lines.
     ScrollUp(u16),
-    /// Forward one screenful.
     PageDown,
-    /// Backward one screenful.
     PageUp,
-    /// Forward half a screenful.
     HalfPageDown,
-    /// Backward half a screenful.
     HalfPageUp,
-    /// Jump to the top of the document.
     Home,
-    /// Jump to the bottom.
     End,
-    /// Jump to 1-indexed rendered line `n` (from a numeric prefix + `G`).
+    /// Jump to 1-indexed rendered line `n` (numeric prefix + `G`).
     GotoLine(usize),
-    /// Enter search-input mode; subsequent keys build a pattern string.
+    /// Enter search-input mode; subsequent keys build a pattern.
     BeginSearch(SearchDirection),
-    /// Append a character to the in-progress search pattern.
     SearchChar(char),
-    /// Remove the last character from the in-progress search pattern.
     SearchBackspace,
-    /// Commit the in-progress search (`Enter`).
     SearchCommit,
-    /// Abandon the in-progress search (`Esc`).
     SearchCancel,
-    /// Cycle to the next match in the current search direction.
     SearchNext,
-    /// Cycle to the previous match.
     SearchPrev,
-    /// Clear any existing search highlight.
     ClearHighlights,
-    /// Jump to the next heading after the viewport top (`]]`).
     NextHeading,
-    /// Jump to the previous heading before the viewport top (`[[`).
     PrevHeading,
-    /// Open or close the table-of-contents side panel (`T`).
     ToggleToc,
-    /// Activate the current TOC entry (`Enter` while the panel owns focus).
+    /// Activate the current TOC entry (`Enter` while the modal is open).
     TocActivate,
-    /// Save the viewport top under bookmark register `letter` (`m{a-z}`).
+    /// Save the current viewport top under bookmark `letter` (`m{a-z}`).
     SetBookmark(char),
-    /// Jump to the line saved under bookmark register `letter` (`'{a-z}`).
+    /// Jump to bookmark `letter` (`'{a-z}`).
     JumpBookmark(char),
-    /// Toggle the rendered-line number gutter (`#`).
     ToggleLineNumbers,
 }
 
 /// Direction selected by `/` vs `?`.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[allow(missing_docs)]
 pub enum SearchDirection {
-    /// Match at or after the current position.
     Forward,
-    /// Match at or before the current position.
     Backward,
 }
 
-/// Stateful decoder that absorbs prefixes and emits commands.
+/// Stateful decoder: absorbs prefix keys and emits commands.
 ///
-/// Each field holds one kind of pending prefix; the next keystroke
-/// either completes a digraph (`gg`, `]]`, `m a`) or cancels it and
-/// dispatches normally.
+/// Each field tracks one kind of pending prefix (`gg`, `]]`, numeric
+/// count, `m`/`'` bookmark register, or active `/` / `?` input). The
+/// next keystroke either completes a digraph or cancels and dispatches.
 #[derive(Debug, Default)]
 pub struct Decoder {
-    /// Accumulated numeric count for commands like `42G` or `5j`.
     count: u32,
-    /// `g` has been seen; a second `g` fires [`Command::Home`].
     pending_g: bool,
-    /// Previous bracket character awaiting its twin for `[[` / `]]`.
     pending_bracket: Option<char>,
-    /// `m` has been seen; the next letter names a bookmark to set.
     pending_mark_set: bool,
-    /// `'` has been seen; the next letter names a bookmark to jump to.
     pending_mark_jump: bool,
-    /// In `/` or `?` input mode: keystrokes append to the search pattern.
     searching: bool,
 }
 
 impl Decoder {
-    /// Whether the decoder is currently collecting a search pattern.
+    /// True while the decoder is collecting a `/` / `?` pattern.
     pub fn in_search(&self) -> bool {
         self.searching
     }
-}
 
-impl Decoder {
     /// Feed one key event; get back the resulting command.
     pub fn feed(&mut self, key: KeyEvent) -> Command {
         let KeyEvent {
@@ -138,7 +87,7 @@ impl Decoder {
 
         // Ctrl+C always quits, even mid-prefix or mid-search.
         if modifiers.contains(KeyModifiers::CONTROL) && matches!(code, KeyCode::Char('c')) {
-            self.reset();
+            *self = Self::default();
             return Command::Quit;
         }
 
@@ -270,14 +219,6 @@ impl Decoder {
             KeyCode::Char(c) => Command::SearchChar(c),
             _ => Command::Noop,
         }
-    }
-
-    fn reset(&mut self) {
-        self.count = 0;
-        self.pending_g = false;
-        self.pending_bracket = None;
-        self.pending_mark_set = false;
-        self.pending_mark_jump = false;
     }
 }
 

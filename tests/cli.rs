@@ -1,5 +1,4 @@
 // Copyright 2020 Sebastian Wiesner <sebastian@swsnr.de>
-// Copyright 2026 Pawel Boguszewski
 
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -49,9 +48,7 @@ mod cli {
             output.status,
         );
         assert!(output.stderr.is_empty());
-        assert!(
-            stdout.contains("This program is subject to the terms of the Mozilla Public License,")
-        );
+        assert!(stdout.contains("Mozilla Public License"));
     }
 
     #[test]

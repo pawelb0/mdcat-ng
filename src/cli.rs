@@ -1,30 +1,11 @@
-// Copyright 2026 Pawel Boguszewski
-
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-//! Shared command-line entry point for both binaries.
+//! Shared CLI entry point for both binaries.
 //!
-//! This file contains:
-//!
-//! - `run` — the full CLI dispatch. Parses arguments via clap,
-//!   sets up tracing, detects the terminal program + multiplexer
-//!   + DA1-probed Sixel capability, then hands off to either the
-//!   interactive pager or the one-shot renderer. Never returns.
-//! - `run_interactive_mdless` — helper that builds an
-//!   [`MdlessOptions`](crate::mdless::MdlessOptions) from the
-//!   parsed `mdless` subcommand and drives the pager loop.
-//!
-//! How it fits: clap's multicall mode dispatches on `argv[0]`.
-//! `src/main.rs` (the `mdcat` binary) and `src/bin/mdless.rs` (the
-//! `mdless` binary) are both three-line shims that call into
-//! `run`. Everything beyond argument parsing lives here —
-//! terminal detection, paging-mode selection, resource-handler
-//! construction, the per-file render loop — so the two binaries
-//! share one code path. Completions, `--detect-terminal`, and the
-//! interactive branch all exit via `std::process::exit` from
-//! inside this file.
+//! `src/main.rs` and `src/bin/mdless.rs` are shims into [`run`].
+//! clap's multicall mode picks the subcommand from `argv[0]`.
 
 use clap::{CommandFactory, Parser};
 use clap_complete::generate;
@@ -40,13 +21,8 @@ use tracing::{event, Level};
 use tracing_subscriber::filter::LevelFilter;
 use tracing_subscriber::EnvFilter;
 
-/// Parse arguments, detect the terminal, and dispatch to the right
-/// output path. Never returns: exits the process with the exit code.
+/// Parse arguments, detect the terminal, dispatch. Exits the process.
 pub fn run() -> ! {
-    // libcurl init lives inside `create_resource_handler` so that
-    // `--local` and the interactive pager (which never loads remote
-    // resources) skip the cost entirely.
-
     let filter = EnvFilter::builder()
         .with_default_directive(LevelFilter::OFF.into())
         .with_env_var("MDCAT_LOG")
@@ -114,18 +90,15 @@ pub fn run() -> ! {
     #[cfg(windows)]
     anstyle_query::windows::enable_ansi_colors();
 
-    let terminal_size = TerminalSize::detect().unwrap_or_default();
-    let terminal_size = if let Some(max_columns) = args.columns {
-        terminal_size.with_max_columns(max_columns)
+    // Leave ~2 columns of breathing room on the right edge, except on
+    // pathologically narrow terminals where every column counts.
+    let base = TerminalSize::detect().unwrap_or_default();
+    let max_columns = args.columns.unwrap_or(if base.columns > 20 {
+        base.columns - 2
     } else {
-        // Leave ~2 columns of breathing room on the right edge.
-        const RIGHT_MARGIN: u16 = 2;
-        if terminal_size.columns > 20 {
-            terminal_size.with_max_columns(terminal_size.columns - RIGHT_MARGIN)
-        } else {
-            terminal_size
-        }
-    };
+        base.columns
+    });
+    let terminal_size = base.with_max_columns(max_columns);
 
     let exit_code = match Output::new(paging_mode == PagingMode::ExternalLess) {
         Ok(mut output) => {

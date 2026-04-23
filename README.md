@@ -1,21 +1,17 @@
 <div align="center">
 
-# mdcat
+# mdcat-ng
 
-**Render Markdown in the terminal. Inline images, clickable links,
-syntax-highlighted code, an interactive pager.**
+**Render Markdown in the terminal. Inline images, syntax-highlighted
+code, hyperlinks, an interactive viewer.**
 
-[![Crates.io](https://img.shields.io/crates/v/mdcat.svg)](https://crates.io/crates/mdcat)
+[![Crates.io](https://img.shields.io/crates/v/mdcat-ng.svg)](https://crates.io/crates/mdcat-ng)
 [![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](./LICENSE)
 [![Rust 1.83+](https://img.shields.io/badge/rust-1.83+-orange.svg)](https://www.rust-lang.org)
 
 </div>
 
-> [!NOTE]
-> 3.x is a continuation fork of [swsnr/mdcat], which was marked
-> unmaintained at v2.7.1 in December 2024. 3.0 adds the interactive
-> `mdless` pager, broader terminal coverage, Sixel image output, and
-> reorganises the library API.
+> Forked from [swsnr/mdcat].
 >
 > [swsnr/mdcat]: https://github.com/swsnr/mdcat
 
@@ -25,183 +21,137 @@ syntax-highlighted code, an interactive pager.**
 
 ---
 
-## Features
+## What it is
 
-- **Images inline**, natively, on iTerm2, Kitty, WezTerm, Ghostty, Rio,
-  VS Code, Terminology, and any terminal that speaks the [Sixel]
-  protocol (Foot, Contour, mlterm, Windows Terminal, xterm).
-- **tmux and GNU screen passthrough.** Image escapes wrap in DCS so
-  multiplexed sessions forward them to the underlying terminal.
-- **Sixel detection via DA1 probe** when environment variables leave
-  mdcat on a plain ANSI profile.
-- **OSC 8 hyperlinks** for every link and reference. Clickable in
-  the terminal.
-- **Syntect syntax highlighting** for fenced code blocks in hundreds
-  of languages. Solarized Dark default.
-- **GFM alert blockquotes** (`> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`,
-  `> [!WARNING]`, `> [!CAUTION]`) with colour-coded labels.
-- **Smart punctuation** at parse time (`"quoted"`, en/em dash, ellipsis).
-- **Interactive `mdless` pager** with search, heading jumps, TOC modal,
-  and vi-style bookmarks.
-- **Pipe-safe output.** Styling and image escapes drop when stdout is
-  not a TTY, matching `grep`/`ls`/`cat` behaviour.
-- **No silent network calls.** Remote images render as hyperlinks
-  unless `--remote-images` is set.
+Two binaries. `mdcat` renders a Markdown file to stdout; `mdless`
+opens an interactive view over the same output.
+
+Inline images work natively on iTerm2, Kitty, WezTerm, Ghostty,
+Rio, VS Code, and Terminology, and via DEC [Sixel] on Foot,
+Contour, mlterm, Windows Terminal (1.22+), and `xterm -ti vt340`.
+When the terminal can't render an image, links fall back to OSC 8
+hyperlinks. Fenced code blocks are highlighted with [syntect].
+
+`mdless` renders the document once, pins the bytes in a buffer,
+and scrolls in place. Images are disabled during the rendering.
 
 [Sixel]: https://en.wikipedia.org/wiki/Sixel
-
-## Performance
-
-Four choices keep the render loop tight:
-
-- Local-only by default. No HTTP fetches unless `--remote-images`
-  is set. Most `mdcat doc.md` runs never hit the network.
-- Parallel remote prefetch. When `--remote-images` is enabled,
-  image URLs fetch concurrently; a doc with many badges pays one
-  round-trip instead of one per image.
-- Short DA1 capability probe, overridable via `--probe-timeout-ms`.
-- Lazy libcurl init. Only runs when remote fetching is configured.
-
-## Quick start
-
-```sh
-# Render a file
-mdcat README.md
-
-# Render from stdin
-curl -sL https://example.com/doc.md | mdcat -
-
-# Open the interactive pager
-mdless README.md
-
-# Open at first match of a pattern
-mdless --search "## Installation" README.md
-```
+[syntect]: https://github.com/trishume/syntect
 
 ## Install
 
-| Platform                  | Command / source                                                     |
-|---------------------------|----------------------------------------------------------------------|
-| Cargo                     | `cargo install mdcat`                                                |
-| Release binaries          | [GitHub Releases] (provenance attestations attached)                 |
-| Distribution packages     | [Repology tracker]                                                   |
-| From source (this fork)   | `git clone … && cargo install --path .`                              |
+```sh
+cargo install mdcat-ng
+```
 
-A `cargo install` produces two binaries: `mdcat` (renderer) and
-`mdless` (interactive pager). `libcurl` must be available at build
-time.
+Installs both `mdcat` and `mdless`. `libcurl` is required at build
+time — macOS bundles it, Debian/Ubuntu want `libcurl4-dev`, Fedora
+`curl-devel`.
 
-[GitHub Releases]: https://github.com/swsnr/mdcat/releases
-[Repology tracker]: https://repology.org/project/mdcat/versions
+Prebuilt tarballs are attached to every [release]
 
-## `mdcat` — render to the terminal
+[release]: https://github.com/pawelb0/mdcat-ng/releases
+
+## `mdcat`
 
 ```sh
-mdcat FILE.md                 # render to stdout
-mdcat file1.md file2.md       # concatenate renders
-mdcat -                       # read from stdin
-mdcat --paginate FILE         # pipe through $PAGER / less -r
-mdcat --columns 80 FILE       # pin the wrap width
-mdcat --ansi FILE             # force styling when stdout is not a TTY
-mdcat --detect-terminal       # print detected terminal + multiplexer + probed caps
-mdcat --no-probe-terminal …   # skip the DA1 Sixel probe
+mdcat README.md                # render to stdout
+curl -sL URL | mdcat -         # from stdin
+mdcat file1.md file2.md        # concatenate renders
+mdcat --paginate FILE          # pipe through $PAGER / less -r
+mdcat --columns 80 FILE        # pin wrap width
+mdcat --ansi FILE              # force styling when stdout isn't a TTY
+mdcat --detect-terminal        # report the detected terminal + caps
 ```
 
-Full flag reference: `mdcat --help` or [`mdcat(1)`](./mdcat.1.adoc).
+Full flag list: `mdcat --help` or [`mdcat(1)`](./mdcat.1.adoc).
 
-### Non-TTY output
+### Piped output
 
-When stdout is piped, redirected, or captured by tooling, `mdcat`
-drops all ANSI styling and image protocols and emits plain text. Keep
-colours explicitly when you want them:
+When stdout is a pipe, styling and image escapes drop and the
+output is plain text — same convention as `cat`, `grep`, and `ls`.
+If you want colour through a pipe, pass `--ansi` or keep `LESS=-R`
+in the environment.
 
-- `mdcat --paginate` (built-in `less -r` shellout)
-- `mdless` (built-in interactive pager)
-- `LESS=-R` in the environment when piping to `less` manually
-- `--ansi` to force styled output unconditionally
+### tmux and GNU screen
 
-### Inside tmux or GNU screen
+Set `allow-passthrough on` in the tmux config and image escapes
+reach the underlying terminal. Screen triggers the same DCS wrap
+automatically from `$STY`.
 
-`$TMUX` or `$STY` triggers DCS passthrough so Kitty graphics, iTerm2
-inline images, and Sixel reach the underlying terminal. For tmux,
-enable passthrough in the server config:
+### Remote images
 
-```tmux
-set -g allow-passthrough on
+HTTP images are not fetched by default. Opt in explicitly:
+
+```sh
+mdcat --remote-images README.md
 ```
 
-GNU screen needs no additional configuration.
+## `mdless`
 
-## `mdless` — interactive markdown pager
+Interactive Markdown viewer — vi-style scrolling, live search with
+highlight, heading jumps, TOC modal, bookmarks.
 
-Running the binary as `mdless` launches a built-in markdown-aware
-pager. The document renders once to an in-memory buffer; scrolling,
-searching, and highlighting operate on that buffer without
-re-rendering.
+### Keys
 
-### Keybindings
-
-| Key              | Action                                                    |
-|------------------|-----------------------------------------------------------|
-| `j` / `k`        | Scroll one rendered line down / up                        |
-| `Space` / `b`    | Page forward / back                                       |
-| `Ctrl+D` / `U`   | Half page forward / back                                  |
-| `g` / `G`        | Jump to top / bottom                                      |
-| `NG`             | Jump to rendered line `N` (numeric prefix)                |
-| `/PATTERN`       | Forward search (smart-case, literal by default)           |
-| `?PATTERN`       | Backward search                                           |
-| `n` / `N`        | Cycle to next / previous match                            |
-| `Esc`            | Clear search highlights                                   |
-| `]]` / `[[`      | Jump to next / previous heading                           |
-| `T`              | Open the TOC modal (`Enter` jumps, `Esc` closes)          |
-| `m{a-z}`         | Save the current viewport top as bookmark `a`..`z`        |
-| `'{a-z}`         | Jump back to a saved bookmark                             |
-| `Ctrl+L`         | Force redraw                                              |
-| `q` / `Ctrl+C`   | Quit                                                      |
+| Key            | Action                                           |
+| -------------- | ------------------------------------------------ |
+| `j` / `k`      | Scroll one rendered line down / up               |
+| `Space` / `b`  | Page forward / back                              |
+| `Ctrl+D` / `U` | Half page forward / back                         |
+| `g` / `G`      | Jump to top / bottom                             |
+| `NG`           | Jump to rendered line `N` (numeric prefix)       |
+| `/PATTERN`     | Forward search (smart-case, literal by default)  |
+| `?PATTERN`     | Backward search                                  |
+| `n` / `N`      | Next / previous match                            |
+| `Esc`          | Clear search highlights                          |
+| `]]` / `[[`    | Jump to next / previous heading                  |
+| `T`            | Open the TOC modal (`Enter` jumps, `Esc` closes) |
+| `m{a-z}`       | Save the current top as bookmark `a`..`z`        |
+| `'{a-z}`       | Jump back to a saved bookmark                    |
+| `Ctrl+L`       | Force redraw                                     |
+| `q` / `Ctrl+C` | Quit                                             |
 
 ### Flags
 
-| Flag                  | Purpose                                                     |
-|-----------------------|-------------------------------------------------------------|
-| `--search PATTERN`    | Commit a query before the event loop starts                 |
-| `--regex`             | Interpret the pattern as a regex (literal by default)       |
-| `--case-sensitive`    | Disable smart-case; force case-sensitive matching           |
-| `--external-pager`    | Fall back to `$PAGER` / `less -r` (pre-3.0 behaviour)       |
-| `--no-pager` / `-P`   | Skip the pager entirely and print to stdout                 |
+| Flag                | Purpose                                           |
+| ------------------- | ------------------------------------------------- |
+| `--search PATTERN`  | Commit a query before the event loop starts       |
+| `--regex`           | Interpret the pattern as a regex                  |
+| `--case-sensitive`  | Disable smart-case; force case-sensitive matching |
+| `--external-pager`  | Fall back to `$PAGER` / `less -r`                 |
+| `--no-pager` / `-P` | Skip the interactive view and print to stdout     |
 
-Matches highlight in-place against the SGR-styled buffer. Bold,
-italic, colour, and OSC 8 link styles survive the highlight reset —
-the pager re-emits whatever CSI-m state was active at the match
-start.
+## Terminal support
 
-## Terminal support matrix
+| Terminal           | Styling | Hyperlinks | Images | Notes                          |
+| ------------------ | :-----: | :--------: | :----: | ------------------------------ |
+| [iTerm2]           |    ✓    |     ✓      | native | Heading jump marks (⇧⌘↑ / ⇧⌘↓) |
+| [Kitty]            |    ✓    |     ✓      | native | Kitty graphics protocol        |
+| [WezTerm]          |    ✓    |     ✓      | native | Kitty + iTerm2                 |
+| [Ghostty]          |    ✓    |     ✓      | native | Kitty protocol                 |
+| [Rio]              |    ✓    |     ✓      | native | Kitty protocol                 |
+| [VS Code]          |    ✓    |     ✓      | native | iTerm2 protocol                |
+| [Terminology]      |    ✓    |     ✓      | native | tycat protocol                 |
+| [Foot]             |    ✓    |     ✓      | Sixel  |                                |
+| [Windows Terminal] |    ✓    |     ✓      | Sixel  | Since 1.22                     |
+| [Contour]          |    ✓    |     ✓      | Sixel  |                                |
+| [mlterm]           |    ✓    |            | Sixel  |                                |
+| [xterm]            |    ✓    |            | Sixel¹ | `xterm -ti vt340`              |
+| [Alacritty]        |    ✓    |     ✓      |        |                                |
+| [Konsole]          |    ✓    |     ✓      |        |                                |
+| [Warp]             |    ✓    |     ✓      |        |                                |
+| [Hyper]            |    ✓    |            |        |                                |
+| [Apple Terminal]   |    ✓    | macOS 15+  |        | OSC 8 gated on macOS version   |
+| Basic ANSI         |    ✓    |            |        | Strikethrough + OSC 8 required |
 
-| Terminal              | Styling | Hyperlinks | Images  | Notes                               |
-|-----------------------|:-------:|:----------:|:-------:|-------------------------------------|
-| [iTerm2]              | ✓       | ✓          | native  | Jump marks for headings (⇧⌘↑ / ⇧⌘↓) |
-| [Kitty]               | ✓       | ✓          | native  | Kitty graphics protocol              |
-| [WezTerm]             | ✓       | ✓          | native  | Kitty + iTerm2 protocols             |
-| [Ghostty]             | ✓       | ✓          | native  | Kitty protocol                       |
-| [Rio]                 | ✓       | ✓          | native  | Kitty protocol                       |
-| [VS Code]             | ✓       | ✓          | native  | iTerm2 protocol                      |
-| [Terminology]         | ✓       | ✓          | native  | tycat protocol                       |
-| [Foot]                | ✓       | ✓          | Sixel   | Pure Sixel                           |
-| [Windows Terminal]    | ✓       | ✓          | Sixel   | Sixel since 1.22                     |
-| [Contour]             | ✓       | ✓          | Sixel   |                                      |
-| [mlterm]              | ✓       |            | Sixel   |                                      |
-| [xterm]               | ✓       |            | Sixel¹  | Requires `xterm -ti vt340`           |
-| [Alacritty]           | ✓       | ✓          |         |                                      |
-| [Konsole]             | ✓       | ✓          |         |                                      |
-| [Warp]                | ✓       | ✓          |         |                                      |
-| [Hyper]               | ✓       |            |         |                                      |
-| [Apple Terminal]      | ✓       | macOS 15+  |         | OSC 8 support gated on macOS version |
-| Basic ANSI            | ✓       |            |         | Strikethrough + OSC 8 required       |
+1. Detected at runtime via a Primary Device Attributes probe
+   unless `--no-probe-terminal` is set. If your terminal advertises
+   Sixel but the probe times out, bump the window with
+   `--probe-timeout-ms 200`.
 
-1) Detected at runtime via a Primary Device Attributes probe unless
-   `--no-probe-terminal` is set.
-
-SVG images are rasterised with [resvg]; see its [support matrix][svg]
-for which SVG features render faithfully.
+SVG images render via [resvg]; its [support matrix][svg] lists the
+SVG features that round-trip faithfully.
 
 [iTerm2]: https://www.iterm2.com
 [Kitty]: https://sw.kovidgoyal.net/kitty/
@@ -223,31 +173,22 @@ for which SVG features render faithfully.
 [resvg]: https://github.com/RazrFalcon/resvg
 [svg]: https://github.com/RazrFalcon/resvg#svg-support
 
-## Markdown support
+## Markdown extensions
 
-`mdcat` parses CommonMark plus these extensions:
+Beyond CommonMark:
 
-- Pipe tables
-- Task lists (`- [x]`)
-- Strikethrough (`~~text~~`)
+- Pipe tables, task lists (`- [x]`), strikethrough (`~~text~~`)
 - GFM alert blockquotes (`> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`,
   `> [!WARNING]`, `> [!CAUTION]`)
 - Smart punctuation (curly quotes, en/em dash, ellipsis)
-- Footnotes (`[^1]` refs + definitions)
-- Definition lists (`term\n: definition`)
-- Wiki links (`[[Page]]`, `[[Page|label]]`)
+- Footnotes, definition lists, wiki links (`[[Page]]`,
+  `[[Page|label]]`)
 
-Not yet implemented:
+Not supported: math (`$inline$`, `$$block$$`), inline markup
+inside table cells (plain text only), cell reflow — cells
+truncate with `…`.
 
-- Math (`$inline$`, `$$block$$`).
-- Styled inline markup inside table cells (plain text only).
-- Cell reflow and text wrap inside tables — cells truncate with `…`.
-
-## Library usage
-
-`mdcat` exposes its renderer as a Rust crate. The 3.0 line collapsed
-the former `pulldown-cmark-mdcat` workspace member back into the main
-crate; downstream consumers should migrate to `mdcat::*` paths.
+## Library use
 
 ```rust
 use mdcat::{push_tty, Environment, Settings, TerminalProgram, Theme};
@@ -270,72 +211,34 @@ let mut out = Vec::new();
 push_tty(&settings, &env, &handler, &mut out, Parser::new(markdown))?;
 ```
 
-`push_tty_with_observer` accepts a `RenderObserver` invoked on every
-`pulldown-cmark` event with the output writer's current byte offset.
-The interactive pager uses it to collect heading positions.
-
 ## Packaging
 
-When packaging `mdcat`, include:
+A `cargo install` gives you both binaries. Package metadata:
 
-- Both `mdcat` and `mdless` binaries (produced by a single
-  `cargo install`).
-- Shell completions via `--completions`:
-  ```sh
-  mdcat  --completions fish > /usr/share/fish/vendor_completions.d/mdcat.fish
-  mdcat  --completions bash > /usr/share/bash-completion/completions/mdcat
-  mdcat  --completions zsh  > /usr/share/zsh/site-functions/_mdcat
-  mdless --completions fish > /usr/share/fish/vendor_completions.d/mdless.fish
-  mdless --completions bash > /usr/share/bash-completion/completions/mdless
-  mdless --completions zsh  > /usr/share/zsh/site-functions/_mdless
-  ```
-- A built manpage from `mdcat.1.adoc` via [AsciiDoctor]:
-  ```sh
-  asciidoctor -b manpage -a reproducible -o /usr/share/man/man1/mdcat.1 mdcat.1.adoc
-  gzip /usr/share/man/man1/mdcat.1
-  ln -s mdcat.1.gz /usr/share/man/man1/mdless.1.gz
-  ```
-
-[AsciiDoctor]: https://asciidoctor.org
+- Manpage: `asciidoctor -b manpage -a reproducible mdcat.1.adoc`.
+  Symlink `mdless.1` to the same manpage.
+- Shell completions: `mdcat --completions {bash,zsh,fish}`,
+  same for `mdless`.
 
 ## Troubleshooting
 
-Set `MDCAT_LOG=trace` for full tracing output, or a module-scoped
-filter such as `MDCAT_LOG=mdcat::render=trace` to narrow it down.
-Logs go to stderr so they don't contaminate rendered output.
+`MDCAT_LOG=trace` turns on full trace logging; scope it with
+`MDCAT_LOG=mdcat::render=trace` for a single module. Logs go to
+stderr.
 
-`mdcat --detect-terminal` reports the detected terminal, multiplexer,
-and any capabilities discovered via the DA1 probe — useful when an
-expected protocol isn't firing.
+`mdcat --detect-terminal` prints the detected terminal, the
+multiplexer (if any), and whatever the DA1 probe discovered — the
+first thing to check if an image protocol isn't firing where you
+expect it to.
 
 ## Contributing
 
-Bug reports and patches are welcome. Please run the full check
-locally before opening a PR:
+See [CONTRIBUTING.md](./CONTRIBUTING.md). The short version is
+`cargo fmt --check && cargo clippy --all-targets --all-features
+-- -D warnings && cargo test --all-targets` before you open a PR.
 
-```sh
-cargo fmt --check
-cargo clippy --all-targets --all-features -- -D warnings
-cargo test --all-targets
-```
+## Licence
 
-Rendering changes require a snapshot rebase; see
-[`CONTRIBUTING.md`](./CONTRIBUTING.md) for the full workflow, coding
-conventions, and writing-style rules applied to comments and
-documentation.
-
-## Authors
-
-- Sebastian Wiesner — original author of `mdcat` (2.x and earlier).
-- Pawel Boguszewski — 3.x continuation fork, interactive `mdless`,
-  expanded terminal matrix.
-
-See [CHANGELOG.md](./CHANGELOG.md) for the full list of changes per
-release.
-
-## License
-
-Binaries and most source files are distributed under the Mozilla
-Public License, v. 2.0 — see [LICENSE](./LICENSE). A small number of
-files are dual-licensed under Apache 2.0; the file header indicates
-the applicable licence.
+MPL-2.0, with a handful of files dual-licensed Apache-2.0. File
+headers mark the applicable licence. See [LICENSE](./LICENSE) and
+the [CHANGELOG](./CHANGELOG.md) for release history.

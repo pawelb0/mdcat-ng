@@ -1,5 +1,4 @@
 // Copyright 2018 Vinícius dos Santos Oliveira <vini.ipsmaker@gmail.com>
-// Copyright 2026 Pawel Boguszewski
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
