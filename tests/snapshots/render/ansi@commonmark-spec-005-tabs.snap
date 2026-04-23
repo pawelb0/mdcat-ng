@@ -1,13 +1,12 @@
 ---
 source: tests/render.rs
-assertion_line: 112
+assertion_line: 115
 expression: "render_to_string(markdown_file, &ansi_settings)"
 input_file: tests/markdown/commonmark-spec/005-tabs.md
-snapshot_kind: text
 ---
 • foo
 
   [32m╭────────────────────────────────────────────────────────────────────────────╮[0m
-  [32m│ [0m[33m  [0m                                                                        [32m │[0m
-  [32m│ [0m[33mbar[0m                                                                       [32m │[0m
+  [32m│ [0m                                                                          [32m │[0m
+  [32m│ [0mbar                                                                       [32m │[0m
   [32m╰────────────────────────────────────────────────────────────────────────────╯[0m

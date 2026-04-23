@@ -1,18 +1,17 @@
 ---
 source: tests/render.rs
-assertion_line: 113
+assertion_line: 116
 expression: "render_to_string(markdown_file, &iterm2_settings)"
 input_file: tests/markdown/commonmark-spec/191-html_blocks.md
-snapshot_kind: text
 ---
 [32m<table>
 [0m
 [32m  [0m[32m<tr>
 [0m
 [32m╭──────────────────────────────────────────────────────────────────────────────╮[0m
-[32m│ [0m[33m<td>[0m                                                                        [32m │[0m
-[32m│ [0m[33m  Hi[0m                                                                        [32m │[0m
-[32m│ [0m[33m</td>[0m                                                                       [32m │[0m
+[32m│ [0m<td>                                                                        [32m │[0m
+[32m│ [0m  Hi                                                                        [32m │[0m
+[32m│ [0m</td>                                                                       [32m │[0m
 [32m╰──────────────────────────────────────────────────────────────────────────────╯[0m
 
 [32m  [0m[32m</tr>

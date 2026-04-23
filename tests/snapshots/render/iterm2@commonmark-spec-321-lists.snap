@@ -1,15 +1,14 @@
 ---
 source: tests/render.rs
-assertion_line: 113
+assertion_line: 116
 expression: "render_to_string(markdown_file, &iterm2_settings)"
 input_file: tests/markdown/commonmark-spec/321-lists.md
-snapshot_kind: text
 ---
 • a
   [90m▌ [0m[3mb[0m
 
   [32m╭────────────────────────────────────────────────────────────────────────────╮[0m
-  [32m│ [0m[33mc[0m                                                                         [32m │[0m
+  [32m│ [0mc                                                                         [32m │[0m
   [32m╰────────────────────────────────────────────────────────────────────────────╯[0m
 
 • d
