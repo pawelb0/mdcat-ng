@@ -8,6 +8,26 @@ Use `cargo release` to create a new release.
 
 ## [Unreleased]
 
+## [0.2.1] – 2026-04-23
+
+### Fixed
+
+- Unlabeled fenced code blocks no longer render with forced yellow;
+  they now use the ambient paragraph style.
+- Syntect highlighting state persists correctly across lines;
+  shell comments and other line-scoped syntaxes close at end of
+  line instead of bleeding into subsequent lines.
+- `cmd | mdless` now works on macOS. crossterm's default mio backend
+  can't register tty fds through kqueue; switched to the
+  `use-dev-tty` feature which uses `poll(2)` instead.
+
+### Changed
+
+- Both macOS release binaries build on `macos-latest` (Apple
+  Silicon), with `x86_64-apple-darwin` cross-compiled from the
+  aarch64 host. Drops the dependency on queue-starved `macos-13`
+  runners.
+
 ## [0.2.0] – development line
 
 Forked from [swsnr/mdcat].
