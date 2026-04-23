@@ -1,30 +1,12 @@
-// Copyright 2026 Pawel Boguszewski
-//
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-//! Search-highlight writer for one line of styled output.
+//! SGR-aware match highlighting.
 //!
-//! This file contains:
-//!
-//! - [`Highlight`] — the per-line set of byte ranges to highlight:
-//!   one optional "current" match plus zero or more "other" matches.
-//! - [`write_line`] — writes a single line of styled bytes to a
-//!   `Write`, wrapping each highlighted range in SGR. After each
-//!   highlight it re-emits whatever SGR state was active at the
-//!   match start so bold / italic / link underline survive the
-//!   highlight reset.
-//! - SGR constants for the match / current-match / highlight-off
-//!   escape sequences.
-//!
-//! How it fits: [`view`](super::view) owns the draw loop.
-//! For each visible line it builds a [`Highlight`] (by filtering
-//! the full match list from [`search`](super::search) down to the
-//! ranges that intersect this line) and calls [`write_line`].
-//! Match + current styling are distinct so `n` / `N` cycle
-//! visually obvious — the active match gets a yellow background,
-//! the rest reverse video.
+//! [`write_line`] wraps each match in SGR and re-emits the style
+//! state active at the match start. Current match is yellow; others
+//! use reverse video.
 
 use std::io::{self, Write};
 use std::ops::Range;
@@ -46,11 +28,6 @@ pub struct Highlight {
 }
 
 impl Highlight {
-    /// Empty highlight (line renders verbatim).
-    pub fn none() -> Self {
-        Self::default()
-    }
-
     /// True when no ranges are set.
     pub fn is_empty(&self) -> bool {
         self.current.is_none() && self.others.is_empty()
@@ -183,7 +160,7 @@ mod tests {
     #[test]
     fn no_highlight_passes_through_verbatim() {
         let mut out = Vec::new();
-        write_line(&mut out, b"hello world\n", &Highlight::none()).unwrap();
+        write_line(&mut out, b"hello world\n", &Highlight::default()).unwrap();
         assert_eq!(out, b"hello world\n");
     }
 

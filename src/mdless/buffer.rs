@@ -1,34 +1,12 @@
-// Copyright 2026 Pawel Boguszewski
-//
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-//! Document buffer for the interactive pager.
+//! In-memory document for the interactive view.
 //!
-//! This file holds the data the rest of `mdless` reads from:
-//!
-//! - [`RenderedDoc`] is the pre-rendered document the pager keeps in
-//!   memory. It stores the styled bytes (what the terminal sees), a
-//!   plain-text copy with all ANSI stripped (what search matches
-//!   against), parallel line-start indexes into both buffers, and a
-//!   list of headings.
-//! - [`HeadingRecorder`] is a `RenderObserver` that collects heading
-//!   positions and text while the render pipeline runs.
-//! - [`build`] is the constructor: given the styled output of
-//!   `push_tty` plus the recorded headings, it computes the ANSI
-//!   strip and the line indexes and hands back a ready-to-scroll
-//!   document.
-//!
-//! How it fits: `mdless::run` calls `push_tty` once with a
-//! `HeadingRecorder` attached, passes the styled bytes and the
-//! collected headings into `build`, and from that point on every
-//! other module reads the resulting [`RenderedDoc`].
-//! [`view`](super::view) walks `styled_line_starts` to emit the
-//! visible slice; [`search`](super::search) runs patterns against
-//! `plain` and maps matches back through the parallel indexes;
-//! [`highlight`](super::highlight) splices SGR around those mapped
-//! ranges; [`toc`](super::toc) lists entries from `headings`.
+//! [`RenderedDoc`] holds the styled bytes, an ANSI-stripped plain
+//! copy, parallel line-start indexes, and a heading list. Built
+//! once from `push_tty` output plus a [`HeadingRecorder`].
 
 use pulldown_cmark::{Event, HeadingLevel, Tag, TagEnd};
 

@@ -1,31 +1,12 @@
-// Copyright 2026 Pawel Boguszewski
-//
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-//! Viewport for the interactive pager.
+//! Viewport and draw loop.
 //!
-//! This file contains:
-//!
-//! - [`View`] — scroll offset, terminal size, gutter toggle. Mutated
-//!   by the event loop (a `j` keystroke advances `top` by one, a
-//!   resize event updates `cols`/`rows`, and so on).
-//! - [`View::draw`] — one-frame render. Given a [`RenderedDoc`] and
-//!   the current search highlights, writes the visible slice plus
-//!   the status line to any `Write`. Tests assert on `Vec<u8>`;
-//!   production writes to stdout.
-//! - [`View::draw_toc`] — modal frame replacing the body when the
-//!   TOC is open.
-//! - Private helpers for the line-number gutter.
-//!
-//! How it fits: `mdless::run` owns a single `View` plus a
-//! `RenderedDoc`. Every keystroke calls into `View::apply` (scroll
-//! commands), `View::scroll_to` (search/heading jumps), or
-//! `View::jump_to` (bookmarks), then `View::draw` emits the next
-//! frame. Search + heading modules never touch `View` directly —
-//! they hand `mdless::mod` a target line, which calls the scroll
-//! method.
+//! [`View`] owns the scroll offset and size. [`draw`](View::draw)
+//! emits the next frame; [`draw_toc`](View::draw_toc) replaces the
+//! body when the TOC modal is open.
 
 use std::io::{self, Write};
 
@@ -37,27 +18,21 @@ use super::toc::Toc;
 
 /// Scroll state bound to a terminal size.
 #[derive(Debug, Clone, Copy)]
+#[allow(missing_docs)]
 pub struct View {
-    /// Rendered line currently at the top of the viewport (0-indexed).
+    /// Zero-indexed rendered line at the top of the viewport.
     pub top: usize,
-    /// Terminal width in columns.
     pub cols: u16,
-    /// Terminal height in rows, including the status line.
     pub rows: u16,
-    /// When true, each body row renders with a dim left-gutter
-    /// showing its 1-indexed rendered line number. Toggled live
-    /// with `#` and switched on at startup via `--line-numbers`.
+    /// Dim 1-indexed line-number gutter. Toggled live with `#`.
     pub line_numbers: bool,
 }
 
-/// Columns stolen by the gutter: digit field (3) + ` │ ` separator (3).
-///
-/// Public because `render_doc` reserves these columns at render time
-/// so code-block frames and tables fit once the gutter paints.
+/// Columns the gutter reserves: `NNN │ ` = digits(3) + separator(3).
 pub const GUTTER: u16 = 6;
 
 impl View {
-    /// New view at `(cols, rows)`, scrolled to the top.
+    /// Viewport at `(cols, rows)`, scrolled to the top.
     pub fn new(cols: u16, rows: u16) -> Self {
         Self {
             top: 0,
@@ -73,63 +48,56 @@ impl View {
         self
     }
 
-    /// Number of document rows the viewport can show. Last row is the
-    /// status line; guarantees at least 1.
+    /// Body rows available above the status line; at least 1.
     fn body_rows(&self) -> usize {
         self.rows.saturating_sub(1).max(1) as usize
     }
 
-    /// Apply `cmd` to the scroll state. Returns `true` when the caller
-    /// should quit the event loop.
+    fn max_top(&self, doc: &RenderedDoc) -> usize {
+        doc.line_count().saturating_sub(self.body_rows())
+    }
+
+    /// Apply `cmd` to the scroll state. Returns `true` on `Quit`.
     ///
-    /// Search-related commands do not affect the scroll position; the
-    /// event loop in [`crate::mdless`] wires those to the search state
-    /// and may call [`Self::scroll_to`] separately.
+    /// Search / highlight / redraw commands are handled by the event
+    /// loop; this method only reacts to scroll commands.
     pub fn apply(&mut self, cmd: Command, doc: &RenderedDoc) -> bool {
-        let max_top = doc.line_count().saturating_sub(self.body_rows());
+        let max = self.max_top(doc);
+        let body = self.body_rows();
         match cmd {
             Command::Quit => return true,
-            Command::ScrollDown(n) => self.top = self.top.saturating_add(n as usize).min(max_top),
+            Command::ScrollDown(n) => self.top = (self.top + n as usize).min(max),
             Command::ScrollUp(n) => self.top = self.top.saturating_sub(n as usize),
-            Command::PageDown => self.top = self.top.saturating_add(self.body_rows()).min(max_top),
-            Command::PageUp => self.top = self.top.saturating_sub(self.body_rows()),
-            Command::HalfPageDown => {
-                self.top = self.top.saturating_add(self.body_rows() / 2).min(max_top);
-            }
-            Command::HalfPageUp => self.top = self.top.saturating_sub(self.body_rows() / 2),
+            Command::PageDown => self.top = (self.top + body).min(max),
+            Command::PageUp => self.top = self.top.saturating_sub(body),
+            Command::HalfPageDown => self.top = (self.top + body / 2).min(max),
+            Command::HalfPageUp => self.top = self.top.saturating_sub(body / 2),
             Command::Home => self.top = 0,
-            Command::End => self.top = max_top,
-            Command::GotoLine(n) => self.top = n.saturating_sub(1).min(max_top),
-            // Non-scrolling commands (search, highlights, redraw, noop)
-            // are handled by the event loop, not the view.
+            Command::End => self.top = max,
+            Command::GotoLine(n) => self.top = n.saturating_sub(1).min(max),
             _ => {}
         }
         false
     }
 
-    /// Scroll so that `line` sits inside the viewport. Places the target
-    /// near the top with a short breadcrumb above when space allows.
+    /// Scroll so `line` sits near the top, leaving a two-line breadcrumb
+    /// above it when the document has room. Jumps for search / heading
+    /// navigation use this; bookmarks want exact placement and call
+    /// [`jump_to`](Self::jump_to) instead.
     pub fn scroll_to(&mut self, line: usize, doc: &RenderedDoc) {
-        let max_top = doc.line_count().saturating_sub(self.body_rows());
-        let desired = line.saturating_sub(2);
-        self.top = desired.min(max_top);
+        self.top = line.saturating_sub(2).min(self.max_top(doc));
     }
 
-    /// Set the viewport top to `line` exactly, clamped to the document.
-    ///
-    /// Used for bookmarks so jumping to a saved line round-trips the
-    /// view faithfully (no breadcrumb shift the way `scroll_to` does).
+    /// Place `line` at the exact top of the viewport, clamped to the doc.
     pub fn jump_to(&mut self, line: usize, doc: &RenderedDoc) {
-        let max_top = doc.line_count().saturating_sub(self.body_rows());
-        self.top = line.min(max_top);
+        self.top = line.min(self.max_top(doc));
     }
 
-    /// Resize the viewport and clamp `top` so we don't scroll past the end.
+    /// Update size after a terminal resize and clamp `top` to the new end.
     pub fn resize(&mut self, cols: u16, rows: u16, doc: &RenderedDoc) {
         self.cols = cols;
         self.rows = rows;
-        let max_top = doc.line_count().saturating_sub(self.body_rows());
-        self.top = self.top.min(max_top);
+        self.top = self.top.min(self.max_top(doc));
     }
 
     /// Render the visible document slice + status line to `out`.
@@ -163,15 +131,14 @@ impl View {
             // the gutter or the next line's prose.
             out.write_all(b"\x1b[0m")?;
             let line_index = self.top + row;
-            if line_index >= doc.line_count() {
-                if self.line_numbers {
-                    write_gutter_blank(out, gutter_width)?;
-                }
+            let past_eof = line_index >= doc.line_count();
+            if self.line_numbers {
+                let n = if past_eof { None } else { Some(line_index + 1) };
+                write_gutter(out, gutter_width, n)?;
+            }
+            if past_eof {
                 out.write_all(b"\r\n")?;
                 continue;
-            }
-            if self.line_numbers {
-                write_gutter_number(out, gutter_width, line_index + 1)?;
             }
             let line_bytes = doc.styled_line(line_index);
             // Raw mode needs CR before LF, otherwise the cursor stays
@@ -242,24 +209,19 @@ impl View {
     }
 }
 
-/// Decimal digit count of `n`, with a floor of 1 so `0` still reserves
-/// one column of gutter.
+/// Decimal digit count of `n`, with a floor of 1.
 fn digit_count(n: usize) -> usize {
     n.checked_ilog10().map_or(1, |log| log as usize + 1)
 }
 
-/// Write the line-number gutter: right-aligned number, separator, space.
-///
-/// Dim SGR keeps the number quiet next to the body so it reads as
-/// chrome rather than content.
-fn write_gutter_number<W: Write>(out: &mut W, width: usize, n: usize) -> io::Result<()> {
-    write!(out, "\x1b[2m{n:>width$} │\x1b[0m ")
-}
-
-/// Blank gutter: same footprint, no number. Used for empty rows after
-/// the document ends so the separator column stays aligned.
-fn write_gutter_blank<W: Write>(out: &mut W, width: usize) -> io::Result<()> {
-    write!(out, "\x1b[2m{:>width$} │\x1b[0m ", "")
+/// Write one row's gutter. `number = None` leaves a blank field (past-EOF
+/// rows) so the separator column stays aligned. Dim SGR keeps the number
+/// quiet enough to read as chrome rather than content.
+fn write_gutter<W: Write>(out: &mut W, width: usize, number: Option<usize>) -> io::Result<()> {
+    match number {
+        Some(n) => write!(out, "\x1b[2m{n:>width$} │\x1b[0m "),
+        None => write!(out, "\x1b[2m{:>width$} │\x1b[0m ", ""),
+    }
 }
 
 /// Collect the highlight ranges that intersect `line`, translated to

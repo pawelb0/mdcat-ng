@@ -52,7 +52,7 @@ Type "clear"
 Enter
 Show
 
-# Scene 2 — mdless interactive pager.
+# Scene 2 — mdless interactive viewer.
 Type "mdless --search '\\d+' --regex sample/stress.md"
 Sleep 250ms
 Enter

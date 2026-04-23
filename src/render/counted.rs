@@ -1,25 +1,11 @@
-// Copyright 2026 Pawel Boguszewski
-//
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-//! Byte-counting `Write` adapter.
+//! `Write` adapter that counts bytes.
 //!
-//! This file contains [`CountingWriter`], a wrapper around any
-//! `std::io::Write` that tracks the number of bytes successfully
-//! written. Partial writes are handled correctly via the default
-//! `write_all` implementation so the counter stays exact even when
-//! the underlying writer only accepts part of a buffer at a time.
-//!
-//! How it fits: [`push_tty_with_observer`](crate::push_tty_with_observer)
-//! wraps its caller's writer in a `CountingWriter` before entering
-//! the render loop. Before each pulldown-cmark event dispatches,
-//! the observer receives the writer's current byte count alongside
-//! the event. The pager's `HeadingRecorder` uses those offsets to
-//! map headings onto output bytes so `]]` / `[[` and the TOC modal
-//! can jump by line. Nothing outside the render pipeline needs to
-//! know about this type.
+//! Used by [`push_tty_with_observer`](crate::push_tty_with_observer)
+//! to report byte offsets across partial writes.
 
 use std::io::{self, Write};
 

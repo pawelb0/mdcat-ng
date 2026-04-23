@@ -1,38 +1,12 @@
-// Copyright 2026 Pawel Boguszewski
-
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-//! Parallel prefetch of remote image URLs.
+//! Parallel prefetch for remote image URLs.
 //!
-//! This file contains:
-//!
-//! - [`scan_remote_image_urls`] — walk a slice of pulldown-cmark
-//!   events, resolve image URLs against the document's base, and
-//!   return the unique `http` / `https` URLs in source order.
-//! - [`prefetch_remote`] — fetch every URL in parallel using one
-//!   std thread per URL, capped at [`MAX_PARALLEL_FETCHES`]. Each
-//!   thread owns its own `CurlResourceHandler` so there's no
-//!   shared state; results come back through an mpsc channel.
-//! - [`CachingResourceHandler`] — a [`ResourceUrlHandler`] that
-//!   serves a prefetched cache first and delegates the rest to an
-//!   inner handler.
-//! - [`prefetch_and_wrap`] — the convenience that composes the
-//!   three above into one call the render pipeline uses.
-//!
-//! How it fits: `mdcat::process_file` collects the full
-//! pulldown-cmark event stream into a `Vec` before rendering.
-//! When remote access is enabled it calls
-//! [`prefetch_and_wrap`], which hands back a resource handler
-//! already populated with every remote image byte-for-byte. The
-//! renderer then walks the events a second time to emit styled
-//! output; each image-event read hits the in-memory cache instead
-//! of triggering a sequential HTTP round-trip. Result: a doc with
-//! three badge URLs pays one wall-time round-trip, not three.
-//! When `--remote-images` is off, `process_file` constructs an
-//! empty cache and the whole path degenerates to a no-cost
-//! passthrough.
+//! Scan the event stream for unique remote URLs, fan fetches out to
+//! worker threads (capped at [`MAX_PARALLEL_FETCHES`]), cache the
+//! results in a [`CachingResourceHandler`].
 
 use std::collections::{HashMap, HashSet};
 use std::io::Result;
@@ -138,6 +112,11 @@ impl<H: ResourceUrlHandler> CachingResourceHandler<H> {
     pub fn new(cache: HashMap<Url, MimeData>, inner: H) -> Self {
         Self { cache, inner }
     }
+
+    /// Wrap `inner` with an empty cache (every read falls through).
+    pub fn passthrough(inner: H) -> Self {
+        Self::new(HashMap::new(), inner)
+    }
 }
 
 impl<H: ResourceUrlHandler> ResourceUrlHandler for CachingResourceHandler<H> {
@@ -160,7 +139,7 @@ pub fn prefetch_and_wrap<H: ResourceUrlHandler>(
 ) -> CachingResourceHandler<H> {
     let urls = scan_remote_image_urls(events, env);
     if urls.is_empty() {
-        return CachingResourceHandler::new(HashMap::new(), inner);
+        return CachingResourceHandler::passthrough(inner);
     }
     event!(
         Level::DEBUG,

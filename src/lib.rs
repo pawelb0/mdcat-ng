@@ -1,5 +1,4 @@
 // Copyright 2018-2020 Sebastian Wiesner <sebastian@swsnr.de>
-// Copyright 2026 Pawel Boguszewski
 
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -68,8 +67,11 @@ use crate::args::ResourceAccess;
 use crate::output::Output;
 use crate::resources::{CurlResourceHandler, DispatchingResourceHandler, FileResourceHandler};
 
-/// Default read size limit for resources.
+/// Default read size limit for resources (100 MiB).
 pub static DEFAULT_RESOURCE_READ_LIMIT: u64 = 104_857_600;
+
+/// HTTP `User-Agent` header for remote resource fetches.
+const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 
 /// CommonMark + the GFM extensions mdcat renders natively.
 ///
@@ -279,23 +281,21 @@ pub fn process_file(
         base_dir.display()
     );
     let env = Environment::for_local_directory(&base_dir)?;
-    // Collect events so a prefetch pass can fan out parallel HTTP
-    // fetches for every remote image before we start rendering. On
-    // --local runs (the default) the scan returns no URLs and the
-    // wrapping handler degenerates to a zero-cost pass-through.
+    // Collect the event stream so the remote-image prefetch can run
+    // before the render loop. On `--local` runs (the default) the
+    // wrapper degenerates to a no-op passthrough.
     let events: Vec<_> = Parser::new_ext(&input, markdown_options()).collect();
-    let caching = if let ResourceAccess::Remote = access {
-        let user_agent: &'static str =
-            concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
-        resources::prefetch_and_wrap(
+    let caching = match access {
+        ResourceAccess::Remote => resources::prefetch_and_wrap(
             &events,
             &env,
-            user_agent,
+            USER_AGENT,
             DEFAULT_RESOURCE_READ_LIMIT,
             resource_handler,
-        )
-    } else {
-        resources::CachingResourceHandler::new(std::collections::HashMap::new(), resource_handler)
+        ),
+        ResourceAccess::LocalOnly => {
+            resources::CachingResourceHandler::passthrough(resource_handler)
+        }
     };
     let resource_handler: &dyn ResourceUrlHandler = &caching;
 
@@ -332,19 +332,12 @@ pub fn create_resource_handler(
         FileResourceHandler::new(DEFAULT_RESOURCE_READ_LIMIT),
     )];
     if let ResourceAccess::Remote = access {
-        // libcurl needs a process-wide init before any easy handle
-        // is used. Do it here rather than at the CLI entry point so
+        // libcurl's process-wide init runs here, not at CLI entry, so
         // `--local` invocations skip the cost entirely.
         curl::init();
-        let user_agent = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
-        event!(
-            target: "mdcat::main",
-            Level::DEBUG,
-            "Remote resource access permitted, creating HTTP client with user agent {}",
-            user_agent
-        );
-        let client = CurlResourceHandler::create(DEFAULT_RESOURCE_READ_LIMIT, user_agent)
-            .with_context(|| "Failed to build HTTP client".to_string())?;
+        event!(target: "mdcat::main", Level::DEBUG, "HTTP client with user agent {USER_AGENT}");
+        let client = CurlResourceHandler::create(DEFAULT_RESOURCE_READ_LIMIT, USER_AGENT)
+            .context("build HTTP client")?;
         resource_handlers.push(Box::new(client));
     }
     Ok(DispatchingResourceHandler::new(resource_handlers))

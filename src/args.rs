@@ -1,5 +1,4 @@
 // Copyright 2018-2020 Sebastian Wiesner <sebastian@swsnr.de>
-// Copyright 2026 Pawel Boguszewski
 
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -17,26 +16,21 @@
 use clap::ValueHint;
 use clap_complete::Shell;
 
-/// `-h`/`--help` footer shown below the flag list.
+/// `-h`/`--help` footer.
 fn after_help() -> &'static str {
     "See 'man 1 mdcat' for more information.
 
-mdcat ships two binaries: `mdcat` renders to stdout, `mdless` opens
-the built-in interactive pager. clap dispatches by executable name.
-
-Report issues to <https://github.com/pawelb0/mdcat>."
+Two binaries ship: mdcat prints to stdout, mdless opens the
+interactive pager. Report issues at
+<https://github.com/pawelb0/mdcat-ng>."
 }
 
-/// `--version` long form: version, copyright, licence pointer.
 fn long_version() -> &'static str {
     concat!(
         env!("CARGO_PKG_VERSION"),
         "
-Copyright (C) Sebastian Wiesner, Pawel Boguszewski and contributors
-
-This program is subject to the terms of the Mozilla Public License,
-v. 2.0. If a copy of the MPL was not distributed with this file,
-You can obtain one at http://mozilla.org/MPL/2.0/."
+Licensed under the Mozilla Public License, v. 2.0.
+See <http://mozilla.org/MPL/2.0/>."
     )
 }
 
@@ -114,34 +108,22 @@ pub enum PagingMode {
 }
 
 impl Command {
-    /// Resolve the active paging mode from the parsed flags.
+    /// Resolve the active paging mode from the parsed flags. `--no-pager`
+    /// always wins via clap's `overrides_with`, so by this point the flag
+    /// combinations below are already mutually consistent.
     pub fn paging_mode(&self) -> PagingMode {
         match *self {
-            // mdcat: paginate only when --paginate (or -p) is set; --no-pager wins via
-            // `overrides_with` so the bool here reflects the final state.
-            Command::Mdcat { paginate, .. } => {
-                if paginate {
-                    PagingMode::ExternalLess
-                } else {
-                    PagingMode::None
-                }
-            }
-            // mdless: --no-pager → None; --external-pager → old `less -r` path;
-            // --render-only → None (same as mdcat FILE); otherwise Interactive.
+            Command::Mdcat { paginate: true, .. } => PagingMode::ExternalLess,
+            Command::Mdcat { .. } => PagingMode::None,
+            Command::Mdless { no_pager: true, .. }
+            | Command::Mdless {
+                render_only: true, ..
+            } => PagingMode::None,
             Command::Mdless {
-                no_pager,
-                external_pager,
-                render_only,
+                external_pager: true,
                 ..
-            } => {
-                if no_pager || render_only {
-                    PagingMode::None
-                } else if external_pager {
-                    PagingMode::ExternalLess
-                } else {
-                    PagingMode::Interactive
-                }
-            }
+            } => PagingMode::ExternalLess,
+            Command::Mdless { .. } => PagingMode::Interactive,
         }
     }
 }
