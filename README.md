@@ -40,17 +40,36 @@ and scrolls in place. Images are disabled during the rendering.
 
 ## Install
 
+Homebrew (macOS, Linux):
+
+```sh
+brew tap pawelb0/tap
+brew install mdcat-ng
+```
+
+Scoop (Windows):
+
+```sh
+scoop bucket add pawelb0 https://github.com/pawelb0/scoop-bucket
+scoop install mdcat-ng
+```
+
+cargo-binstall (prebuilt binary):
+
+```sh
+cargo binstall mdcat-ng
+```
+
+From source:
+
 ```sh
 cargo install mdcat-ng
 ```
 
-Installs both `mdcat` and `mdless`. `libcurl` is required at build
-time — macOS bundles it, Debian/Ubuntu want `libcurl4-dev`, Fedora
-`curl-devel`.
+Building from source needs `libcurl`: macOS bundles it,
+Debian/Ubuntu need `libcurl4-dev`, Fedora `curl-devel`.
 
-Prebuilt tarballs are attached to every [release]
-
-[release]: https://github.com/pawelb0/mdcat-ng/releases
+Prebuilt tarballs for every release: <https://github.com/pawelb0/mdcat-ng/releases>
 
 ## `mdcat`
 
