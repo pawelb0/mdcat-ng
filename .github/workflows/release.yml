@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - mdcat-ng-*
+  # Manual trigger for dry-runs: builds + uploads artifacts to the
+  # workflow run but skips the create-release job.
+  workflow_dispatch:
 
 jobs:
   build-manpage:
@@ -64,6 +67,7 @@ jobs:
           path: ${{ steps.package.outputs.file }}
 
   create-release:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     needs: build-binaries
     permissions:
