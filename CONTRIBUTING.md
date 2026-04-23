@@ -67,6 +67,5 @@ Commit the rebaseline alongside the code change.
 
 ## References
 
-- Upstream: <https://github.com/swsnr/mdcat>
 - CommonMark: <https://spec.commonmark.org/>
 - pulldown-cmark: <https://docs.rs/pulldown-cmark/>
