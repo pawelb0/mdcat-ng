@@ -11,10 +11,6 @@ code, hyperlinks, an interactive viewer.**
 
 </div>
 
-> Forked from [swsnr/mdcat].
->
-> [swsnr/mdcat]: https://github.com/swsnr/mdcat
-
 <p align="center">
   <img src="./tapes/demo.gif" alt="mdcat + mdless demo">
 </p>
@@ -23,8 +19,8 @@ code, hyperlinks, an interactive viewer.**
 
 ## What it is
 
-Two binaries. `mdcat` renders a Markdown file to stdout; `mdless`
-opens an interactive view over the same output.
+Project provides two binaries. `mdcat` renders a Markdown file
+to stdout; `mdless` opens an interactive view over the same output.
 
 Inline images work natively on iTerm2, Kitty, WezTerm, Ghostty,
 Rio, VS Code, and Terminology, and via DEC [Sixel] on Foot,
@@ -261,3 +257,9 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md). The short version is
 MPL-2.0, with a handful of files dual-licensed Apache-2.0. File
 headers mark the applicable licence. See [LICENSE](./LICENSE) and
 the [CHANGELOG](./CHANGELOG.md) for release history.
+
+## Acknowledgements
+
+Based on [swsnr/mdcat].
+
+[swsnr/mdcat]: https://github.com/swsnr/mdcat
