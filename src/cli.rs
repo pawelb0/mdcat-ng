@@ -12,10 +12,9 @@ use clap_complete::generate;
 
 use crate::args::{Args, PagingMode};
 use crate::output::Output;
-use crate::parse::markdown::MarkdownParser;
 use crate::{
-    create_resource_handler, process_file, Multiplexer, Settings, TerminalProgram, TerminalSize,
-    Theme,
+    create_resource_handler, process_file, MarkdownParser, Multiplexer, Settings, TerminalProgram,
+    TerminalSize, Theme,
 };
 use syntect::parsing::SyntaxSet;
 use tracing::{event, Level};
