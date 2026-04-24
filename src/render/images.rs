@@ -176,9 +176,7 @@ pub(super) fn handle_rendered_image<'a>(
     data: StateData<'a>,
     event: crate::events::Event<'a>,
 ) -> Result<StateAndData<StateData<'a>>> {
-    use crate::events::Event::{End, Start};
-    use crate::events::Tag::Image;
-    use crate::events::TagEnd;
+    use crate::events::{Event::*, Tag::Image, TagEnd};
     match event {
         Start(Image { .. }) => stack
             .push(StackedState::RenderedImage)

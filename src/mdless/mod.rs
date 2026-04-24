@@ -35,10 +35,9 @@ use toc::Toc;
 use view::View;
 
 use crate::args::CommonArgs;
-use crate::parse::SourceParser;
 use crate::resources::ResourceUrlHandler;
 use crate::terminal::capabilities::TerminalCapabilities;
-use crate::{read_input, Environment, Multiplexer, Settings, TerminalProgram, Theme};
+use crate::{read_input, Environment, Multiplexer, Settings, SourceParser, TerminalProgram, Theme};
 
 /// Options passed from the `mdless` CLI into the pager session.
 #[derive(Debug, Clone, Default)]
