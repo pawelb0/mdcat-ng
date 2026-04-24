@@ -4,30 +4,24 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-//! mdcat: render structured documents to TTYs.
+//! Render markdown to a terminal.
 //!
-//! This crate exposes both the command-line interface entry points and the core rendering
-//! library (previously published as `pulldown-cmark-mdcat`). See [`push_tty`] for the main
-//! library entry point, and [`process_file`] for the CLI-level helper that reads an input
-//! file, parses it through a [`SourceParser`], and renders it to the given [`Output`].
+//! [`push_tty`] is the library entry point: it consumes an iterator of
+//! [`events::Event`] and writes styled output to any [`Write`]. A
+//! [`SourceParser`] turns input text into that stream;
+//! [`MarkdownParser`] is the bundled implementation. [`process_file`]
+//! wires file I/O, parsing, and rendering together for the CLI.
 //!
-//! Today only [`MarkdownParser`] ships; other formats can implement the trait
-//! against the shared [`events`] vocabulary without touching the renderer.
+//! # Cargo features
 //!
-//! ## Features
+//! - `svg` — render SVG to PNG via `resvg` for terminals without
+//!   native SVG.
+//! - `image-processing` — decode raster images via `image` before
+//!   handing them to the terminal's image protocol.
+//! - `sixel` — sixel output via `icy_sixel`; implies
+//!   `image-processing`.
 //!
-//! - `default` enables `svg` and `image-processing`.
-//!
-//! - `svg` includes support for rendering SVG images to PNG for terminals which do not support SVG
-//!   images natively.  This feature adds a dependency on `resvg`.
-//!
-//! - `image-processing` enables processing of pixel images before rendering.  This feature adds
-//!   a dependency on `image`.  If disabled mdcat will not be able to render inline images on some
-//!   terminals, or render images incorrectly or at wrong sizes on other terminals.
-//!
-//!   Do not disable this feature unless you are sure that you won't use inline images, or accept
-//!   incomplete rendering of images.  Please do not report issues with inline images with this
-//!   feature disabled.
+//! All three are on by default.
 
 #![deny(warnings, missing_docs, clippy::all)]
 #![forbid(unsafe_code)]
