@@ -9,12 +9,12 @@ use std::io::{Result, Write};
 use std::iter::zip;
 
 use anstyle::Style;
-use pulldown_cmark::{Alignment, BlockQuoteKind, CodeBlockKind, HeadingLevel};
 use syntect::highlighting::HighlightState;
 use syntect::parsing::{ParseState, ScopeStack};
 use textwrap::core::{display_width, Word};
 use textwrap::WordSeparator;
 
+use crate::events::{Alignment, BlockQuoteKind, CodeBlockKind, HeadingLevel};
 use crate::references::*;
 use crate::render::data::{CurrentLine, CurrentTable, LinkReferenceDefinition, TableCell};
 use crate::render::highlighting::highlighter;

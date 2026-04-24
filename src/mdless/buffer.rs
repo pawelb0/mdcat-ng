@@ -8,8 +8,7 @@
 //! copy, parallel line-start indexes, and a heading list. Built
 //! once from `push_tty` output plus a [`HeadingRecorder`].
 
-use pulldown_cmark::{Event, HeadingLevel, Tag, TagEnd};
-
+use crate::events::{Event, HeadingLevel, Tag, TagEnd};
 use crate::RenderObserver;
 
 /// One heading in the rendered document.

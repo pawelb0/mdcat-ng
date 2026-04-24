@@ -5,10 +5,10 @@
 //! Observer hook.
 //!
 //! [`push_tty_with_observer`](crate::push_tty_with_observer) calls
-//! `on_event(byte_offset, event)` before each pulldown-cmark event.
-//! The default [`NoopObserver`] compiles away.
+//! `on_event(byte_offset, event)` before each document event. The
+//! default [`NoopObserver`] compiles away.
 
-use pulldown_cmark::Event;
+use crate::events::Event;
 
 /// Observer invoked on every event the render state machine processes.
 ///

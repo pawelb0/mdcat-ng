@@ -27,7 +27,6 @@ use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, size, EnterAlternateScreen, LeaveAlternateScreen,
 };
 use crossterm::{execute, queue};
-use pulldown_cmark::Parser;
 
 use buffer::{build, HeadingRecorder, RenderedDoc};
 use keys::{Command, Decoder, SearchDirection};
@@ -36,6 +35,7 @@ use toc::Toc;
 use view::View;
 
 use crate::args::CommonArgs;
+use crate::parse::SourceParser;
 use crate::resources::ResourceUrlHandler;
 use crate::terminal::capabilities::TerminalCapabilities;
 use crate::{read_input, Environment, Multiplexer, Settings, TerminalProgram, Theme};
@@ -93,11 +93,18 @@ impl Session {
 /// [`anyhow::Result`] so the caller decides exit code / stderr shape).
 pub fn run(
     filename: &str,
+    parser: &dyn SourceParser,
     common: &CommonArgs,
     opts: MdlessOptions,
     resource_handler: &dyn ResourceUrlHandler,
 ) -> Result<i32> {
-    let doc = render_doc(filename, common, opts.line_numbers, resource_handler)?;
+    let doc = render_doc(
+        filename,
+        parser,
+        common,
+        opts.line_numbers,
+        resource_handler,
+    )?;
     let (cols, rows) = size().unwrap_or((80, 24));
 
     let mut session = Session {
@@ -387,12 +394,13 @@ const MAX_RENDER_COLS: u16 = 120;
 /// pager's in-memory buffer.
 fn render_doc(
     filename: &str,
+    parser: &dyn SourceParser,
     common: &CommonArgs,
     line_numbers: bool,
     resource_handler: &dyn ResourceUrlHandler,
 ) -> Result<RenderedDoc> {
     let (base_dir, input) = read_input(filename)?;
-    let parser = Parser::new_ext(&input, crate::markdown_options());
+    let events = parser.parse(&input);
     let env =
         Environment::for_local_directory(&base_dir).context("build environment for mdless")?;
 
@@ -423,7 +431,7 @@ fn render_doc(
         &env,
         resource_handler,
         &mut styled,
-        parser,
+        events,
         &mut recorder,
     )
     .with_context(|| format!("rendering {}", Path::new(filename).display()))?;

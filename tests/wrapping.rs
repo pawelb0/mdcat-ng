@@ -14,19 +14,20 @@ use syntect::parsing::SyntaxSet;
 
 use mdcat::resources::NoopResourceHandler;
 use mdcat::terminal::{TerminalProgram, TerminalSize};
-use mdcat::{Environment, Multiplexer, Settings, Theme};
+use mdcat::{Environment, Event, Multiplexer, Settings, Theme};
 
 fn render_to_string<S: AsRef<str>>(markdown: S, settings: &Settings) -> String {
-    let parser = Parser::new_ext(
+    let events = Parser::new_ext(
         markdown.as_ref(),
         Options::ENABLE_TASKLISTS | Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TABLES,
-    );
+    )
+    .map(Event::from);
     let mut sink = Vec::new();
     let env = Environment {
         hostname: "HOSTNAME".to_string(),
         ..Environment::for_local_directory(&std::env::current_dir().unwrap()).unwrap()
     };
-    mdcat::push_tty(settings, &env, &NoopResourceHandler, &mut sink, parser).unwrap();
+    mdcat::push_tty(settings, &env, &NoopResourceHandler, &mut sink, events).unwrap();
     String::from_utf8(sink).unwrap()
 }
 

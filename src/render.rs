@@ -11,12 +11,13 @@ use std::io::prelude::*;
 use crate::error::RenderResult as Result;
 
 use anstyle::{Effects, Style};
-use pulldown_cmark::Event;
-use pulldown_cmark::Event::*;
-use pulldown_cmark::Tag;
-use pulldown_cmark::Tag::*;
-use pulldown_cmark::TagEnd;
 use textwrap::core::display_width;
+
+use crate::events::Event;
+use crate::events::Event::*;
+use crate::events::Tag;
+use crate::events::Tag::*;
+use crate::events::TagEnd;
 use tracing::{event, instrument, Level};
 
 use crate::resources::ResourceUrlHandler;

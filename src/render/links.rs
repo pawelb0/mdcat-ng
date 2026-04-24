@@ -12,8 +12,9 @@ use std::io::Write;
 
 use crate::error::RenderResult as Result;
 
-use pulldown_cmark::{CowStr, LinkType};
 use url::Url;
+
+use crate::events::{CowStr, LinkType};
 
 use super::data::CurrentLine;
 use super::state::{InlineAttrs, InlineState, StackedState, StateAndData, StateStack};

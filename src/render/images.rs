@@ -13,8 +13,9 @@ use std::io::Write;
 
 use crate::error::RenderResult as Result;
 
-use pulldown_cmark::{CowStr, LinkType};
 use tracing::{event, Level};
+
+use crate::events::{CowStr, LinkType};
 
 use super::state::{InlineAttrs, InlineState, StackedState, State, StateAndData, StateStack};
 use super::write::write_styled;
@@ -173,11 +174,11 @@ pub(super) fn end_reference<'a, W: Write>(
 pub(super) fn handle_rendered_image<'a>(
     stack: StateStack,
     data: StateData<'a>,
-    event: pulldown_cmark::Event<'a>,
+    event: crate::events::Event<'a>,
 ) -> Result<StateAndData<StateData<'a>>> {
-    use pulldown_cmark::Event::{End, Start};
-    use pulldown_cmark::Tag::Image;
-    use pulldown_cmark::TagEnd;
+    use crate::events::Event::{End, Start};
+    use crate::events::Tag::Image;
+    use crate::events::TagEnd;
     match event {
         Start(Image { .. }) => stack
             .push(StackedState::RenderedImage)

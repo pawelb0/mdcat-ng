@@ -11,11 +11,12 @@
 use std::io::Write;
 
 use anstyle::Style;
-use pulldown_cmark::CowStr;
 use syntect::highlighting::HighlightIterator;
 use syntect::util::LinesWithEndings;
 
 use textwrap::core::display_width;
+
+use crate::events::CowStr;
 
 use super::highlighting::{highlighter, write_as_ansi};
 use super::state::{HighlightBlockAttrs, LiteralBlockAttrs, StateAndData, StateStack};

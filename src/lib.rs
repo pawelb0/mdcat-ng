@@ -4,12 +4,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-//! mdcat: render markdown to TTYs.
+//! mdcat: render structured documents to TTYs.
 //!
 //! This crate exposes both the command-line interface entry points and the core rendering
 //! library (previously published as `pulldown-cmark-mdcat`). See [`push_tty`] for the main
-//! library entry point, and [`process_file`] for the CLI-level helper that reads markdown
-//! from a file and renders it to the given [`Output`].
+//! library entry point, and [`process_file`] for the CLI-level helper that reads an input
+//! file, parses it through a [`SourceParser`], and renders it to the given [`Output`].
+//!
+//! Today only [`MarkdownParser`] ships; other formats can implement the trait
+//! against the shared [`events`] vocabulary without touching the renderer.
 //!
 //! ## Features
 //!
@@ -35,12 +38,14 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Context;
 use gethostname::gethostname;
-use pulldown_cmark::{Event, Options, Parser};
 use syntect::parsing::SyntaxSet;
 use tracing::{event, instrument, Level};
 use url::Url;
 
 pub use crate::error::{RenderError, RenderResult};
+pub use crate::events::Event;
+pub use crate::parse::markdown::MarkdownParser;
+pub use crate::parse::SourceParser;
 pub use crate::render::{NoopObserver, RenderObserver};
 pub use crate::resources::ResourceUrlHandler;
 pub use crate::terminal::capabilities::TerminalCapabilities;
@@ -74,27 +79,6 @@ pub static DEFAULT_RESOURCE_READ_LIMIT: u64 = 104_857_600;
 
 /// HTTP `User-Agent` header for remote resource fetches.
 const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
-
-/// CommonMark + the GFM extensions mdcat renders natively.
-///
-/// CommonMark is the core spec. Task lists, strikethrough, and pipe
-/// tables come from GitHub Flavored Markdown. Smart punctuation
-/// replaces straight quotes and `--`/`...` with typographic
-/// equivalents at parse time. GFM alert blockquotes (`> [!NOTE]`,
-/// `> [!WARNING]`, …) are tagged with a [`pulldown_cmark::BlockQuoteKind`]
-/// that the renderer surfaces as a coloured label. Footnotes,
-/// definition lists, and wiki links are rendered inline with a
-/// matching bottom-of-document footnote section.
-pub fn markdown_options() -> Options {
-    Options::ENABLE_TASKLISTS
-        | Options::ENABLE_STRIKETHROUGH
-        | Options::ENABLE_TABLES
-        | Options::ENABLE_SMART_PUNCTUATION
-        | Options::ENABLE_GFM
-        | Options::ENABLE_FOOTNOTES
-        | Options::ENABLE_DEFINITION_LIST
-        | Options::ENABLE_WIKILINKS
-}
 
 /// Settings for markdown rendering.
 #[derive(Debug)]
@@ -267,10 +251,11 @@ pub fn read_input<T: AsRef<str>>(filename: T) -> anyhow::Result<(PathBuf, String
 
 /// Process a single file.
 ///
-/// Read from `filename` and render the contents to `output`.
-#[instrument(skip(output, settings, resource_handler), level = "debug")]
+/// Read from `filename`, parse with `parser`, and render to `output`.
+#[instrument(skip(parser, output, settings, resource_handler), level = "debug")]
 pub fn process_file(
     filename: &str,
+    parser: &dyn SourceParser,
     settings: &Settings,
     access: ResourceAccess,
     resource_handler: &dyn ResourceUrlHandler,
@@ -286,7 +271,7 @@ pub fn process_file(
     // Collect the event stream so the remote-image prefetch can run
     // before the render loop. On `--local` runs (the default) the
     // wrapper degenerates to a no-op passthrough.
-    let events: Vec<_> = Parser::new_ext(&input, markdown_options()).collect();
+    let events: Vec<_> = parser.parse(&input).collect();
     let caching = match access {
         ResourceAccess::Remote => resources::prefetch_and_wrap(
             &events,
@@ -347,15 +332,14 @@ pub fn create_resource_handler(
 
 #[cfg(test)]
 mod tests {
-    use pulldown_cmark::Parser;
-
+    use crate::events::{Event, Tag};
+    use crate::parse::markdown::MarkdownParser;
+    use crate::parse::SourceParser;
     use crate::resources::NoopResourceHandler;
 
     use super::*;
 
     mod observer {
-        use pulldown_cmark::{Event, Options, Parser, Tag};
-
         use super::*;
 
         /// Observer that records the `(kind, byte_offset)` of each
@@ -380,7 +364,7 @@ mod tests {
         #[test]
         fn observer_sees_heading_events_with_increasing_offsets() {
             let markdown = "# First\n\n## Second\n\nbody\n";
-            let parser = Parser::new_ext(markdown, Options::empty());
+            let parser = MarkdownParser.parse(markdown);
             let mut sink: Vec<u8> = Vec::new();
             let env =
                 Environment::for_local_directory(&std::env::current_dir().expect("cwd available"))
@@ -451,7 +435,7 @@ mod tests {
                 &env,
                 &NoopResourceHandler,
                 &mut plain,
-                Parser::new_ext(markdown, Options::empty()),
+                MarkdownParser.parse(markdown),
             )
             .expect("plain");
 
@@ -461,7 +445,7 @@ mod tests {
                 &env,
                 &NoopResourceHandler,
                 &mut observed,
-                Parser::new_ext(markdown, Options::empty()),
+                MarkdownParser.parse(markdown),
                 &mut NoopObserver,
             )
             .expect("observed");
@@ -473,7 +457,7 @@ mod tests {
     }
 
     fn render_string(input: &str, settings: &Settings) -> RenderResult<String> {
-        let source = Parser::new(input);
+        let source = MarkdownParser.parse(input);
         let mut sink = Vec::new();
         let env =
             Environment::for_local_directory(&std::env::current_dir().expect("Working directory"))?;
