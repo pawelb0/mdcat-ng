@@ -133,18 +133,6 @@ pub fn write_event<'a, W: Write>(
             .current(MetadataBlock)
             .and_data(data)
             .ok(),
-        (TopLevel(attrs), DisplayMath(text)) => {
-            if attrs.margin_before != NoMargin {
-                writeln!(writer)?;
-            }
-            let style = settings.theme.code_style;
-            for line in text.lines() {
-                write_indent(writer, 2)?;
-                write_styled(writer, &settings.terminal_capabilities, &style, line)?;
-                writeln!(writer)?;
-            }
-            TopLevel(TopLevelAttrs::margin_before()).and_data(data).ok()
-        }
         (TopLevel(attrs), Rule) => {
             if attrs.margin_before != NoMargin {
                 writeln!(writer)?;
@@ -589,10 +577,9 @@ pub fn write_event<'a, W: Write>(
             Stacked(stack, Inline(_, _)),
             End(TagEnd::Strong | TagEnd::Emphasis | TagEnd::Strikethrough),
         ) => stack.pop().and_data(data).ok(),
+        // Wrap super/subscript in `^{...}` / `_{...}` — terminals don't
+        // render them natively. Closing `}` lands in the End arm.
         (Stacked(stack, Inline(state, attrs)), Start(tag @ (Superscript | Subscript))) => {
-            // Terminals can't render super/subscript directly; wrap the
-            // contents in `^{...}` / `_{...}`. Closing `}` lands in the End
-            // arm below.
             let marker = if matches!(tag, Superscript) {
                 "^{"
             } else {
@@ -609,9 +596,8 @@ pub fn write_event<'a, W: Write>(
                 &attrs.style,
                 marker,
             )?;
-            length += 2;
             let data = data.current_line(CurrentLine {
-                length,
+                length: length + 2,
                 trailing_space: None,
             });
             stack
@@ -629,10 +615,7 @@ pub fn write_event<'a, W: Write>(
             });
             stack.pop().and_data(data).ok()
         }
-        (
-            Stacked(stack, Inline(state, attrs)),
-            Code(code) | InlineMath(code) | DisplayMath(code),
-        ) => {
+        (Stacked(stack, Inline(state, attrs)), Code(code) | InlineMath(code)) => {
             let current_line = write_styled_and_wrapped(
                 writer,
                 &settings.terminal_capabilities,
@@ -643,6 +626,27 @@ pub fn write_event<'a, W: Write>(
                 attrs.quote_bar_cols.as_slice(),
                 data.current_line,
                 code,
+            )?;
+            let data = StateData {
+                current_line,
+                ..data
+            };
+            Ok(stack.current(Inline(state, attrs)).and_data(data))
+        }
+        // `$$math$$` always arrives inside an implicit paragraph. Trim the
+        // newlines pulldown_cmark includes around the source so inline
+        // rendering stays clean.
+        (Stacked(stack, Inline(state, attrs)), DisplayMath(math)) => {
+            let current_line = write_styled_and_wrapped(
+                writer,
+                &settings.terminal_capabilities,
+                &settings.theme,
+                &settings.theme.code_style.on_top_of(&attrs.style),
+                settings.terminal_size.columns,
+                attrs.indent,
+                attrs.quote_bar_cols.as_slice(),
+                data.current_line,
+                math.trim(),
             )?;
             let data = StateData {
                 current_line,

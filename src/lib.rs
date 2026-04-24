@@ -578,4 +578,66 @@ Hello [Donald](http://example.com/Donald)"
             .unwrap())
         }
     }
+
+    mod extensions {
+        use super::render_string_dumb;
+
+        #[test]
+        fn inline_math_drops_dollar_delimiters() {
+            assert_eq!(
+                render_string_dumb("Text $a = 1$ after.").unwrap(),
+                "Text a = 1 after.\n",
+            );
+        }
+
+        #[test]
+        fn display_math_trims_wrapping_newlines() {
+            // `$$...$$` always arrives wrapped in a paragraph; pulldown_cmark
+            // includes the surrounding newlines in the event text. We trim
+            // those before handing the source to the wrapper so the inline
+            // output stays one line.
+            assert_eq!(
+                render_string_dumb("$$\nE = mc^2\n$$\n").unwrap(),
+                "E = mc^2\n",
+            );
+        }
+
+        #[test]
+        fn yaml_frontmatter_is_swallowed() {
+            assert_eq!(
+                render_string_dumb("---\ntitle: Post\ndate: 2026-01-01\n---\n\nBody.\n").unwrap(),
+                "Body.\n",
+            );
+        }
+
+        #[test]
+        fn toml_frontmatter_is_swallowed() {
+            assert_eq!(
+                render_string_dumb("+++\ntitle = \"Post\"\n+++\n\nBody.\n").unwrap(),
+                "Body.\n",
+            );
+        }
+
+        #[test]
+        fn superscript_wraps_in_caret_braces() {
+            assert_eq!(render_string_dumb("x ^2^ y").unwrap(), "x ^{2} y\n",);
+        }
+
+        #[test]
+        fn subscript_wraps_in_underscore_braces() {
+            assert_eq!(render_string_dumb("H ~2~ O").unwrap(), "H _{2} O\n",);
+        }
+
+        #[test]
+        fn heading_attribute_trailer_stripped() {
+            // Heading text renders on its own line followed by an H1 `═` rule;
+            // only the text line is load-bearing for this test.
+            let out = render_string_dumb("# Title {#intro .big key=val}").unwrap();
+            assert!(out.starts_with("Title\n"), "got: {out:?}");
+            assert!(
+                !out.contains('{') && !out.contains('}'),
+                "attrs leaked: {out:?}"
+            );
+        }
+    }
 }
