@@ -129,6 +129,18 @@ pub fn write_event<'a, W: Write>(
                 .and_data(data)
                 .ok()
         }
+        (TopLevel(attrs), DisplayMath(text)) => {
+            if attrs.margin_before != NoMargin {
+                writeln!(writer)?;
+            }
+            let style = settings.theme.code_style;
+            for line in text.lines() {
+                write_indent(writer, 2)?;
+                write_styled(writer, &settings.terminal_capabilities, &style, line)?;
+                writeln!(writer)?;
+            }
+            TopLevel(TopLevelAttrs::margin_before()).and_data(data).ok()
+        }
         (TopLevel(attrs), Rule) => {
             if attrs.margin_before != NoMargin {
                 writeln!(writer)?;
@@ -573,7 +585,10 @@ pub fn write_event<'a, W: Write>(
             Stacked(stack, Inline(_, _)),
             End(TagEnd::Strong | TagEnd::Emphasis | TagEnd::Strikethrough),
         ) => stack.pop().and_data(data).ok(),
-        (Stacked(stack, Inline(state, attrs)), Code(code)) => {
+        (
+            Stacked(stack, Inline(state, attrs)),
+            Code(code) | InlineMath(code) | DisplayMath(code),
+        ) => {
             let current_line = write_styled_and_wrapped(
                 writer,
                 &settings.terminal_capabilities,
