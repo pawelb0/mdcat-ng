@@ -229,6 +229,8 @@ pub enum StackedState {
     RenderedImage,
     /// A table block.
     TableBlock,
+    /// A YAML / `+++` frontmatter block. All contained events are dropped.
+    MetadataBlock,
     /// Some inline markup.
     Inline(InlineState, InlineAttrs),
 }

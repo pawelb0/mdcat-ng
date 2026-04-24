@@ -129,6 +129,10 @@ pub fn write_event<'a, W: Write>(
                 .and_data(data)
                 .ok()
         }
+        (TopLevel(attrs), Start(Tag::MetadataBlock(_))) => State::stack_onto(attrs)
+            .current(MetadataBlock)
+            .and_data(data)
+            .ok(),
         (TopLevel(attrs), DisplayMath(text)) => {
             if attrs.margin_before != NoMargin {
                 writeln!(writer)?;
@@ -903,9 +907,15 @@ pub fn write_event<'a, W: Write>(
         }
 
         // Unconditional returns to previous states
-        (Stacked(stack, _), End(TagEnd::BlockQuote(_) | TagEnd::List(_) | TagEnd::HtmlBlock)) => {
-            stack.pop().and_data(data).ok()
-        }
+        (
+            Stacked(stack, _),
+            End(
+                TagEnd::BlockQuote(_)
+                | TagEnd::List(_)
+                | TagEnd::HtmlBlock
+                | TagEnd::MetadataBlock(_),
+            ),
+        ) => stack.pop().and_data(data).ok(),
 
         // Events we don't recognise in this state.
         //
