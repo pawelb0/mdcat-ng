@@ -589,6 +589,46 @@ pub fn write_event<'a, W: Write>(
             Stacked(stack, Inline(_, _)),
             End(TagEnd::Strong | TagEnd::Emphasis | TagEnd::Strikethrough),
         ) => stack.pop().and_data(data).ok(),
+        (Stacked(stack, Inline(state, attrs)), Start(tag @ (Superscript | Subscript))) => {
+            // Terminals can't render super/subscript directly; wrap the
+            // contents in `^{...}` / `_{...}`. Closing `}` lands in the End
+            // arm below.
+            let marker = if matches!(tag, Superscript) {
+                "^{"
+            } else {
+                "_{"
+            };
+            let mut length = data.current_line.length;
+            if let Some(space) = data.current_line.trailing_space.as_ref() {
+                write!(writer, "{space}")?;
+                length += display_width(space) as u16;
+            }
+            write_styled(
+                writer,
+                &settings.terminal_capabilities,
+                &attrs.style,
+                marker,
+            )?;
+            length += 2;
+            let data = data.current_line(CurrentLine {
+                length,
+                trailing_space: None,
+            });
+            stack
+                .push(Inline(state, attrs.clone()))
+                .current(Inline(state, attrs))
+                .and_data(data)
+                .ok()
+        }
+        (Stacked(stack, Inline(_, attrs)), End(TagEnd::Superscript | TagEnd::Subscript)) => {
+            write_styled(writer, &settings.terminal_capabilities, &attrs.style, "}")?;
+            let length = data.current_line.length + 1;
+            let data = data.current_line(CurrentLine {
+                length,
+                trailing_space: None,
+            });
+            stack.pop().and_data(data).ok()
+        }
         (
             Stacked(stack, Inline(state, attrs)),
             Code(code) | InlineMath(code) | DisplayMath(code),
