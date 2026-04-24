@@ -48,6 +48,7 @@ pub use crate::terminal::{Multiplexer, TerminalProgram, TerminalSize};
 pub use crate::theme::Theme;
 
 mod error;
+pub mod events;
 pub mod mdless;
 mod references;
 pub mod resources;
