@@ -50,6 +50,7 @@ pub use crate::theme::Theme;
 mod error;
 pub mod events;
 pub mod mdless;
+pub mod parse;
 mod references;
 pub mod resources;
 pub mod terminal;
