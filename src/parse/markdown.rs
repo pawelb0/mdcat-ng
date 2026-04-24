@@ -22,6 +22,7 @@ fn options() -> Options {
         | Options::ENABLE_FOOTNOTES
         | Options::ENABLE_DEFINITION_LIST
         | Options::ENABLE_WIKILINKS
+        | Options::ENABLE_MATH
 }
 
 /// [`SourceParser`] wrapping pulldown_cmark.
