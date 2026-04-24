@@ -18,8 +18,13 @@ pub struct HeadingEntry {
     pub level: u8,
     /// Concatenated inline text of the heading.
     pub text: String,
-    /// Byte offset in the plain buffer where the heading line begins.
-    pub plain_offset: usize,
+    /// Byte offset in the *styled* buffer where the heading line begins.
+    ///
+    /// This is what [`push_tty_with_observer`](crate::push_tty_with_observer)
+    /// reports through the observer hook — it's the writer's cursor, which
+    /// includes ANSI escape bytes. Use [`RenderedDoc::line_for_styled_offset`]
+    /// to resolve it to a line index.
+    pub styled_offset: usize,
 }
 
 /// Pre-rendered markdown document with searchable plain copy + line index.
@@ -58,7 +63,16 @@ impl RenderedDoc {
 
     /// Rendered line index containing `offset` in the plain buffer.
     pub fn line_for_plain_offset(&self, offset: usize) -> usize {
-        match self.line_starts.binary_search(&offset) {
+        Self::line_for(&self.line_starts, offset)
+    }
+
+    /// Rendered line index containing `offset` in the styled buffer.
+    pub fn line_for_styled_offset(&self, offset: usize) -> usize {
+        Self::line_for(&self.styled_line_starts, offset)
+    }
+
+    fn line_for(starts: &[usize], offset: usize) -> usize {
+        match starts.binary_search(&offset) {
             Ok(i) => i,
             Err(i) => i.saturating_sub(1),
         }
@@ -92,7 +106,7 @@ pub struct HeadingRecorder {
 /// Accumulator between `Start(Heading)` and `End(Heading)` events.
 struct PendingHeading {
     level: u8,
-    plain_offset: u64,
+    styled_offset: u64,
     text: String,
 }
 
@@ -109,7 +123,7 @@ impl RenderObserver for HeadingRecorder {
             Event::Start(Tag::Heading { level, .. }) => {
                 self.pending = Some(PendingHeading {
                     level: heading_level_to_u8(*level),
-                    plain_offset: byte_offset,
+                    styled_offset: byte_offset,
                     text: String::new(),
                 });
             }
@@ -118,7 +132,7 @@ impl RenderObserver for HeadingRecorder {
                     self.done.push(HeadingEntry {
                         level: p.level,
                         text: p.text.trim().to_string(),
-                        plain_offset: p.plain_offset as usize,
+                        styled_offset: p.styled_offset as usize,
                     });
                 }
             }
@@ -271,5 +285,27 @@ mod tests {
         assert_eq!(doc.line_for_plain_offset(4), 1); // start of "two"
         assert_eq!(doc.line_for_plain_offset(8), 2); // start of "three"
         assert_eq!(doc.line_for_plain_offset(100), 3); // past end clamps to sentinel
+    }
+
+    /// Regression: TOC jump used plain offsets to look up what is actually
+    /// the writer's styled cursor (includes SGR bytes). Works by accident
+    /// when escape density is light; breaks once a couple of styled lines
+    /// precede a heading, pushing the styled offset past where the plain
+    /// index thinks it should land.
+    #[test]
+    fn styled_offset_resolves_to_heading_line() {
+        // L0: "\x1b[1malpha\x1b[0m\n" — 4+5+4+1 = 14 bytes, plain "alpha\n" = 6
+        // L1: "\x1b[3mbeta\x1b[0m\n"  — 4+4+4+1 = 13 bytes, plain "beta\n"  = 5
+        // L2: "# heading\n"           —        10 bytes, plain = 10
+        // styled_line_starts = [0, 14, 27, 37]; plain line_starts = [0, 6, 11, 21]
+        let styled = b"\x1b[1malpha\x1b[0m\n\x1b[3mbeta\x1b[0m\n# heading\n".to_vec();
+        let doc = build(styled, Vec::new());
+        assert_eq!(doc.styled_line_starts, vec![0, 14, 27, 37]);
+        assert_eq!(doc.line_starts, vec![0, 6, 11, 21]);
+        // Heading entry records styled offset 27.
+        assert_eq!(doc.line_for_styled_offset(27), 2);
+        // Feeding the same styled offset to the plain index misattributes it
+        // — it clamps past the last real line to the sentinel.
+        assert_eq!(doc.line_for_plain_offset(27), 3);
     }
 }
