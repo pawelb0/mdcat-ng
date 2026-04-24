@@ -27,6 +27,7 @@ fn options() -> Options {
         | Options::ENABLE_PLUSES_DELIMITED_METADATA_BLOCKS
         | Options::ENABLE_SUPERSCRIPT
         | Options::ENABLE_SUBSCRIPT
+        | Options::ENABLE_HEADING_ATTRIBUTES
 }
 
 /// [`SourceParser`] wrapping pulldown_cmark.
