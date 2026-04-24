@@ -13,9 +13,10 @@ use std::io::Result;
 use std::sync::mpsc;
 use std::thread;
 
-use pulldown_cmark::{Event, Tag};
 use tracing::{event, Level};
 use url::Url;
+
+use crate::events::{Event, Tag};
 
 use super::curl::CurlResourceHandler;
 use super::{MimeData, ResourceUrlHandler};
@@ -160,7 +161,7 @@ mod tests {
 
     #[test]
     fn scan_deduplicates_and_filters() {
-        use pulldown_cmark::{CowStr, LinkType};
+        use crate::events::{CowStr, LinkType};
         let events = vec![
             Event::Start(Tag::Image {
                 link_type: LinkType::Inline,

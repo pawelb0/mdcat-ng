@@ -5,7 +5,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use anstyle::Style;
-use pulldown_cmark::{Alignment, CowStr, LinkType};
+
+use crate::events::{Alignment, CowStr, LinkType};
 
 /// A pending link.
 #[derive(Debug, PartialEq)]

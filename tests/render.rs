@@ -21,7 +21,7 @@ use url::Url;
 
 use mdcat::resources::*;
 use mdcat::terminal::{TerminalProgram, TerminalSize};
-use mdcat::{Environment, Multiplexer, Settings, Theme};
+use mdcat::{Environment, Event, Multiplexer, Settings, Theme};
 
 static TEST_READ_LIMIT: u64 = 5_242_880;
 
@@ -39,10 +39,11 @@ fn resource_handler() -> DispatchingResourceHandler {
 
 fn render_to_string<P: AsRef<Path>>(markdown_file: P, settings: &Settings) -> String {
     let markdown = std::fs::read_to_string(&markdown_file).unwrap();
-    let parser = Parser::new_ext(
+    let events = Parser::new_ext(
         &markdown,
         Options::ENABLE_TASKLISTS | Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TABLES,
-    );
+    )
+    .map(Event::from);
     let abs_path = std::fs::canonicalize(&markdown_file).unwrap();
     let base_dir = abs_path
         .parent()
@@ -52,7 +53,7 @@ fn render_to_string<P: AsRef<Path>>(markdown_file: P, settings: &Settings) -> St
         hostname: "HOSTNAME".to_string(),
         ..Environment::for_local_directory(&base_dir).unwrap()
     };
-    mdcat::push_tty(settings, &env, &resource_handler(), &mut sink, parser).unwrap();
+    mdcat::push_tty(settings, &env, &resource_handler(), &mut sink, events).unwrap();
     String::from_utf8(sink).unwrap()
 }
 

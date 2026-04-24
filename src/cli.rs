@@ -12,6 +12,7 @@ use clap_complete::generate;
 
 use crate::args::{Args, PagingMode};
 use crate::output::Output;
+use crate::parse::markdown::MarkdownParser;
 use crate::{
     create_resource_handler, process_file, Multiplexer, Settings, TerminalProgram, TerminalSize,
     Theme,
@@ -125,11 +126,13 @@ pub fn run() -> ! {
                 "settings"
             );
             let resource_handler = create_resource_handler(args.resource_access()).unwrap();
+            let parser = MarkdownParser;
             args.filenames
                 .iter()
                 .try_fold(0, |code, filename| {
                     process_file(
                         filename,
+                        &parser,
                         &settings,
                         args.resource_access(),
                         &resource_handler,
@@ -185,7 +188,8 @@ fn run_interactive_mdless(args: &crate::args::Command) -> i32 {
         },
         crate::args::Command::Mdcat { .. } => crate::mdless::MdlessOptions::default(),
     };
-    match crate::mdless::run(filename, args, opts, &resource_handler) {
+    let parser = MarkdownParser;
+    match crate::mdless::run(filename, &parser, args, opts, &resource_handler) {
         Ok(code) => code,
         Err(error) => {
             eprintln!("Error: {filename}: {error:#}");

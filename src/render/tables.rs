@@ -13,11 +13,11 @@ use std::io::Write;
 
 use crate::error::RenderResult as Result;
 
-use pulldown_cmark::Event::{Code, End, InlineHtml, Start, Text};
-use pulldown_cmark::Tag::{
+use crate::events::Event::{Code, End, InlineHtml, Start, Text};
+use crate::events::Tag::{
     Emphasis, Image, Link, Strikethrough, Strong, TableCell, TableHead, TableRow,
 };
-use pulldown_cmark::{Event, TagEnd};
+use crate::events::{Event, TagEnd};
 
 use super::data::{self, StateData};
 use super::state::{StackedState, State, StateAndData, StateStack};

@@ -13,8 +13,9 @@ use std::io::Write;
 
 use crate::error::RenderResult as Result;
 
-use pulldown_cmark::CowStr;
 use syntect::util::LinesWithEndings;
+
+use crate::events::CowStr;
 
 use super::state::{HtmlBlockAttrs, StateAndData, StateStack};
 use super::write::{write_indent, write_styled};
