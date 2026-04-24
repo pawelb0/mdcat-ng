@@ -280,7 +280,7 @@ fn dispatch_toc(s: &mut Session, cmd: Command) -> bool {
         Command::TocActivate => {
             let target = s.toc.as_ref().and_then(|t| s.doc.headings.get(t.selected));
             if let Some(h) = target {
-                let line = s.doc.line_for_plain_offset(h.plain_offset);
+                let line = s.doc.line_for_styled_offset(h.styled_offset);
                 s.view.scroll_to(line, &s.doc);
             }
             s.toc = None;
@@ -301,14 +301,14 @@ fn jump_heading(s: &mut Session, dir: Direction) {
             .doc
             .headings
             .iter()
-            .map(|h| s.doc.line_for_plain_offset(h.plain_offset))
+            .map(|h| s.doc.line_for_styled_offset(h.styled_offset))
             .find(|&line| line > top),
         Direction::Backward => s
             .doc
             .headings
             .iter()
             .rev()
-            .map(|h| s.doc.line_for_plain_offset(h.plain_offset))
+            .map(|h| s.doc.line_for_styled_offset(h.styled_offset))
             .find(|&line| line < top),
     };
     if let Some(line) = target {
@@ -591,7 +591,7 @@ mod tests {
         let headings = vec![super::buffer::HeadingEntry {
             level: 2,
             text: "Sub".to_string(),
-            plain_offset: offset,
+            styled_offset: offset,
         }];
         let mut s = session_with_headings(&lines, headings);
         super::jump_heading(&mut s, super::Direction::Forward);
@@ -606,12 +606,12 @@ mod tests {
             super::buffer::HeadingEntry {
                 level: 1,
                 text: "Intro".to_string(),
-                plain_offset: 0,
+                styled_offset: 0,
             },
             super::buffer::HeadingEntry {
                 level: 2,
                 text: "Body".to_string(),
-                plain_offset: 20,
+                styled_offset: 20,
             },
         ];
         let lines = ["# Intro", "x", "x", "x", "x", "## Body", "x"];
@@ -630,12 +630,12 @@ mod tests {
             super::buffer::HeadingEntry {
                 level: 1,
                 text: "First".to_string(),
-                plain_offset: 0,
+                styled_offset: 0,
             },
             super::buffer::HeadingEntry {
                 level: 1,
                 text: "Second".to_string(),
-                plain_offset: 16,
+                styled_offset: 16,
             },
         ];
         let lines = ["# First", "a", "b", "c", "d", "# Second", "e"];

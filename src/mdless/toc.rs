@@ -74,7 +74,7 @@ mod tests {
             .map(|i| HeadingEntry {
                 level: 1,
                 text: format!("heading {i}"),
-                plain_offset: i * 10,
+                styled_offset: i * 10,
             })
             .collect()
     }
