@@ -13,7 +13,7 @@ use crate::events::Event;
 /// Observer invoked on every event the render state machine processes.
 ///
 /// Implementations typically accumulate a side-table mapping output byte
-/// offsets to structural events. The default [`NoopObserver`] discards
+/// offsets to document events. The default [`NoopObserver`] discards
 /// every call and compiles away under the optimiser.
 pub trait RenderObserver {
     /// Called immediately before the event is rendered.
@@ -27,7 +27,7 @@ pub trait RenderObserver {
 /// Observer that ignores every event.
 ///
 /// Used by [`push_tty`](crate::push_tty) to avoid paying for the hook when
-/// structural information is not needed.
+/// no observation is needed.
 #[derive(Debug, Default, Copy, Clone)]
 pub struct NoopObserver;
 

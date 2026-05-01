@@ -152,8 +152,8 @@ impl Environment {
 /// images, and inline code can overflow).
 ///
 /// Delegates to [`push_tty_with_observer`] with a [`NoopObserver`]. Callers
-/// that need structural information about the rendered output — heading
-/// positions, link ranges, and so on — should use that variant directly.
+/// that need byte offsets for headings, link ranges, and similar landmarks
+/// should use that variant directly.
 #[instrument(level = "debug", skip_all, fields(environment.hostname = environment.hostname.as_str(), environment.base_url = &environment.base_url.as_str()))]
 pub fn push_tty<'a, 'e, W, I>(
     settings: &Settings,
@@ -180,7 +180,7 @@ where
 ///
 /// Same semantics as [`push_tty`]. On each iteration the observer is
 /// called with the output byte offset and the event about to be rendered,
-/// so the observer can build a side-table of structural positions (which
+/// so the observer can build a side-table of document landmarks (which
 /// heading starts at which output byte, where each link anchors, etc.).
 ///
 /// The output writer is wrapped in a byte-counting adapter so the
@@ -337,7 +337,7 @@ mod tests {
         use super::*;
 
         /// Observer that records the `(kind, byte_offset)` of each
-        /// interesting structural event. Used only in tests.
+        /// event we care about. Used only in tests.
         #[derive(Default)]
         struct Recorder {
             entries: Vec<(String, u64)>,
