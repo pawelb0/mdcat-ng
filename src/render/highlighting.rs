@@ -38,8 +38,8 @@ pub fn highlighter() -> &'static Highlighter<'static> {
 /// change depending on light or dark Solarized; to address both light and dark
 /// backgrounds we must map all base colours to the default terminal colours.
 ///
-/// Furthermore we completely ignore any background colour settings, to avoid
-/// conflicts with the terminal colour themes.
+/// We also ignore any background colour settings, to avoid conflicts with the
+/// terminal colour themes.
 pub fn write_as_ansi<'a, W: Write, I: Iterator<Item = (Style, &'a str)>>(
     writer: &mut W,
     regions: I,
