@@ -44,7 +44,10 @@ pub use crate::render::{NoopObserver, RenderObserver};
 pub use crate::resources::ResourceUrlHandler;
 pub use crate::terminal::capabilities::TerminalCapabilities;
 pub use crate::terminal::{Multiplexer, TerminalProgram, TerminalSize};
-pub use crate::theme::{Preset, SyntaxMap, Theme};
+pub use crate::theme::{
+    Preset, SyntaxMap, Theme, SLOT_BLUE, SLOT_CYAN, SLOT_GREEN, SLOT_MAGENTA, SLOT_ORANGE,
+    SLOT_RED, SLOT_VIOLET, SLOT_YELLOW,
+};
 
 mod error;
 pub mod events;

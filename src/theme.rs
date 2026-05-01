@@ -50,10 +50,28 @@ impl Default for Theme {
     }
 }
 
-/// AnsiColor slots for the eight Solarized accent colors that
-/// the syntect theme can produce. Order: yellow, orange, red,
-/// magenta, violet, blue, cyan, green.
+/// AnsiColor slots for the eight Solarized accent colors. Index with
+/// the [`SLOT_YELLOW`] / [`SLOT_ORANGE`] / [`SLOT_RED`] / [`SLOT_MAGENTA`]
+/// / [`SLOT_VIOLET`] / [`SLOT_BLUE`] / [`SLOT_CYAN`] / [`SLOT_GREEN`]
+/// constants from this module.
 pub type SyntaxMap = [anstyle::AnsiColor; 8];
+
+/// Slot index in [`SyntaxMap`] for the Solarized yellow accent.
+pub const SLOT_YELLOW: usize = 0;
+/// Slot index for Solarized orange.
+pub const SLOT_ORANGE: usize = 1;
+/// Slot index for Solarized red.
+pub const SLOT_RED: usize = 2;
+/// Slot index for Solarized magenta.
+pub const SLOT_MAGENTA: usize = 3;
+/// Slot index for Solarized violet.
+pub const SLOT_VIOLET: usize = 4;
+/// Slot index for Solarized blue.
+pub const SLOT_BLUE: usize = 5;
+/// Slot index for Solarized cyan.
+pub const SLOT_CYAN: usize = 6;
+/// Slot index for Solarized green.
+pub const SLOT_GREEN: usize = 7;
 
 /// Built-in color preset selectable via `--theme`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, clap::ValueEnum)]

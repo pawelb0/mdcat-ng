@@ -25,13 +25,10 @@ pub fn highlighter() -> &'static Highlighter<'static> {
     HIGHLIGHTER.get_or_init(|| Highlighter::new(theme()))
 }
 
-/// Write regions as ANSI 8-bit coloured text driven by `syntax_map`.
+/// Write `regions` to `writer`, recoloring Solarized accents through `syntax_map`.
 ///
-/// We collapse 24-bit RGB values from the syntect Solarized theme to the
-/// AnsiColor slot the caller asked for. Base* colors map to the
-/// terminal default so light and dark Solarized share one rendering.
-/// Background colours are dropped to avoid clashing with the user's
-/// terminal theme.
+/// The Solarized base tones collapse to the terminal default so light
+/// and dark variants render identically. Backgrounds are dropped.
 pub fn write_as_ansi<'a, W: Write, I: Iterator<Item = (Style, &'a str)>>(
     writer: &mut W,
     regions: I,
@@ -42,7 +39,6 @@ pub fn write_as_ansi<'a, W: Write, I: Iterator<Item = (Style, &'a str)>>(
             let fg = style.foreground;
             (fg.r, fg.g, fg.b)
         };
-        // Indices match SyntaxMap slot order: yellow, orange, red, magenta, violet, blue, cyan, green.
         let color = match rgb {
             // base03, base02, base01, base00, base0, base1, base2, and base3
             (0x00, 0x2b, 0x36)
@@ -53,14 +49,14 @@ pub fn write_as_ansi<'a, W: Write, I: Iterator<Item = (Style, &'a str)>>(
             | (0x93, 0xa1, 0xa1)
             | (0xee, 0xe8, 0xd5)
             | (0xfd, 0xf6, 0xe3) => None,
-            (0xb5, 0x89, 0x00) => Some(syntax_map[0].into()),
-            (0xcb, 0x4b, 0x16) => Some(syntax_map[1].into()),
-            (0xdc, 0x32, 0x2f) => Some(syntax_map[2].into()),
-            (0xd3, 0x36, 0x82) => Some(syntax_map[3].into()),
-            (0x6c, 0x71, 0xc4) => Some(syntax_map[4].into()),
-            (0x26, 0x8b, 0xd2) => Some(syntax_map[5].into()),
-            (0x2a, 0xa1, 0x98) => Some(syntax_map[6].into()),
-            (0x85, 0x99, 0x00) => Some(syntax_map[7].into()),
+            (0xb5, 0x89, 0x00) => Some(syntax_map[crate::SLOT_YELLOW].into()),
+            (0xcb, 0x4b, 0x16) => Some(syntax_map[crate::SLOT_ORANGE].into()),
+            (0xdc, 0x32, 0x2f) => Some(syntax_map[crate::SLOT_RED].into()),
+            (0xd3, 0x36, 0x82) => Some(syntax_map[crate::SLOT_MAGENTA].into()),
+            (0x6c, 0x71, 0xc4) => Some(syntax_map[crate::SLOT_VIOLET].into()),
+            (0x26, 0x8b, 0xd2) => Some(syntax_map[crate::SLOT_BLUE].into()),
+            (0x2a, 0xa1, 0x98) => Some(syntax_map[crate::SLOT_CYAN].into()),
+            (0x85, 0x99, 0x00) => Some(syntax_map[crate::SLOT_GREEN].into()),
             (r, g, b) => panic!("Unexpected RGB colour: #{r:2>0x}{g:2>0x}{b:2>0x}"),
         };
         let font = style.font_style;
