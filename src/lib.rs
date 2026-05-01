@@ -90,6 +90,8 @@ pub struct Settings<'a> {
     pub syntax_set: &'a SyntaxSet,
     /// Colour theme for mdcat
     pub theme: Theme,
+    /// AnsiColor mapping for syntax-highlight accents.
+    pub syntax_color_map: SyntaxMap,
     /// Wrap code-block lines that exceed the terminal width instead of
     /// overflowing the right border.
     pub wrap_code: bool,
@@ -369,6 +371,7 @@ mod tests {
                 multiplexer: Multiplexer::default(),
                 syntax_set: &SyntaxSet::default(),
                 theme: Theme::default(),
+                syntax_color_map: Preset::Classic.syntax_map(),
                 wrap_code: false,
             };
             let mut recorder = Recorder::default();
@@ -420,6 +423,7 @@ mod tests {
                 multiplexer: Multiplexer::default(),
                 syntax_set: &SyntaxSet::default(),
                 theme: Theme::default(),
+                syntax_color_map: Preset::Classic.syntax_map(),
                 wrap_code: false,
             };
 
@@ -468,6 +472,7 @@ mod tests {
                 terminal_size: TerminalSize::default(),
                 multiplexer: Multiplexer::default(),
                 theme: Theme::default(),
+                syntax_color_map: Preset::Classic.syntax_map(),
                 wrap_code: false,
             },
         )

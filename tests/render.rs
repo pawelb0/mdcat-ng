@@ -21,7 +21,7 @@ use url::Url;
 
 use mdcat::resources::*;
 use mdcat::terminal::{TerminalProgram, TerminalSize};
-use mdcat::{Environment, Event, Multiplexer, Settings, Theme};
+use mdcat::{Environment, Event, Multiplexer, Preset, Settings, Theme};
 
 static TEST_READ_LIMIT: u64 = 5_242_880;
 
@@ -70,6 +70,7 @@ fn test_render() {
         terminal_size: TerminalSize::default(),
         multiplexer: Multiplexer::default(),
         theme: Theme::default(),
+        syntax_color_map: Preset::Classic.syntax_map(),
         syntax_set: syntax_set(),
         wrap_code: false,
     };
@@ -78,6 +79,7 @@ fn test_render() {
         terminal_size: TerminalSize::default(),
         multiplexer: Multiplexer::default(),
         theme: Theme::default(),
+        syntax_color_map: Preset::Classic.syntax_map(),
         syntax_set: syntax_set(),
         wrap_code: false,
     };
@@ -86,6 +88,7 @@ fn test_render() {
         terminal_size: TerminalSize::default(),
         multiplexer: Multiplexer::default(),
         theme: Theme::default(),
+        syntax_color_map: Preset::Classic.syntax_map(),
         syntax_set: syntax_set(),
         wrap_code: false,
     };

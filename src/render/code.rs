@@ -241,7 +241,7 @@ pub(super) fn handle_highlight_text<'a, W: Write>(
                 &settings.theme,
                 attrs.indent,
             )?;
-            write_as_ansi(writer, segments.into_iter())?;
+            write_as_ansi(writer, segments.into_iter(), settings.syntax_color_map)?;
             write_code_line_suffix(
                 writer,
                 &settings.terminal_capabilities,
@@ -274,7 +274,11 @@ pub(super) fn handle_highlight_text<'a, W: Write>(
                 )?;
             }
             let row_width: usize = row.iter().map(|(_, s)| display_width(s)).sum();
-            write_as_ansi(writer, row.iter().map(|(s, t)| (*s, *t)))?;
+            write_as_ansi(
+                writer,
+                row.iter().map(|(s, t)| (*s, *t)),
+                settings.syntax_color_map,
+            )?;
             let extra = if row_idx == 0 { 0 } else { 2 };
             write_code_line_suffix(
                 writer,

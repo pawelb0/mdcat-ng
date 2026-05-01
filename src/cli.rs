@@ -13,8 +13,8 @@ use clap_complete::generate;
 use crate::args::{Args, PagingMode};
 use crate::output::Output;
 use crate::{
-    create_resource_handler, process_file, MarkdownParser, Multiplexer, Settings, TerminalProgram,
-    TerminalSize, Theme,
+    create_resource_handler, process_file, MarkdownParser, Multiplexer, Preset, Settings,
+    TerminalProgram, TerminalSize, Theme,
 };
 use syntect::parsing::SyntaxSet;
 use tracing::{event, Level};
@@ -115,6 +115,7 @@ pub fn run() -> ! {
                 multiplexer,
                 syntax_set: &SyntaxSet::load_defaults_newlines(),
                 theme: Theme::default(),
+                syntax_color_map: Preset::Classic.syntax_map(),
                 wrap_code: args.wrap_code,
             };
             event!(

@@ -14,7 +14,7 @@ use syntect::parsing::SyntaxSet;
 
 use mdcat::resources::NoopResourceHandler;
 use mdcat::terminal::{TerminalProgram, TerminalSize};
-use mdcat::{Environment, Event, Multiplexer, Settings, Theme};
+use mdcat::{Environment, Event, Multiplexer, Preset, Settings, Theme};
 
 fn render_to_string<S: AsRef<str>>(markdown: S, settings: &Settings) -> String {
     let events = Parser::new_ext(
@@ -40,6 +40,7 @@ fn lines_are_below_column_width_of_terminal() {
             terminal_size: TerminalSize::default(),
             multiplexer: Multiplexer::default(),
             theme: Theme::default(),
+            syntax_color_map: Preset::Classic.syntax_map(),
             syntax_set: &SyntaxSet::load_defaults_newlines(),
             wrap_code: false,
         };
