@@ -50,6 +50,76 @@ impl Default for Theme {
     }
 }
 
+/// Built-in color preset selectable via `--theme`
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, clap::ValueEnum)]
+pub enum Preset {
+    /// Pastel default: cool slots, magenta headings
+    #[default]
+    Catppuccin,
+    /// mdcat 1.x defaults
+    Classic,
+    /// Warm magenta-led palette
+    Dracula,
+    /// Cool blue palette
+    Nord,
+}
+
+impl Preset {
+    /// Short one-line description for `--list-themes`.
+    pub fn description(self) -> &'static str {
+        match self {
+            Preset::Catppuccin => "Pastel default. Cool slots, magenta headings.",
+            Preset::Classic => "mdcat 1.x defaults.",
+            Preset::Dracula => "Warm magenta-led palette.",
+            Preset::Nord => "Cool blue palette.",
+        }
+    }
+
+    /// Chrome colors (headings, links, rules, etc.) for this preset.
+    pub fn theme(self) -> Theme {
+        use anstyle::AnsiColor::{
+            Blue, BrightBlack, BrightBlue, BrightCyan, BrightMagenta, BrightYellow, Cyan, Magenta,
+        };
+        use anstyle::Style;
+        match self {
+            Preset::Catppuccin => Theme {
+                heading_style: Style::new().fg_color(Some(Magenta.into())).bold(),
+                link_style: Style::new().fg_color(Some(Cyan.into())),
+                code_style: Style::new().fg_color(Some(BrightYellow.into())),
+                image_link_style: Style::new().fg_color(Some(BrightMagenta.into())),
+                rule_color: BrightBlack.into(),
+                code_block_border_color: BrightBlack.into(),
+                quote_bar_color: BrightBlack.into(),
+                html_block_style: Style::new().fg_color(Some(BrightBlack.into())),
+                inline_html_style: Style::new().fg_color(Some(BrightBlack.into())),
+            },
+            Preset::Classic => Theme::default(),
+            Preset::Dracula => Theme {
+                heading_style: Style::new().fg_color(Some(BrightMagenta.into())).bold(),
+                link_style: Style::new().fg_color(Some(BrightCyan.into())),
+                code_style: Style::new().fg_color(Some(BrightYellow.into())),
+                image_link_style: Style::new().fg_color(Some(BrightMagenta.into())),
+                rule_color: BrightMagenta.into(),
+                code_block_border_color: BrightBlack.into(),
+                quote_bar_color: BrightBlack.into(),
+                html_block_style: Style::new().fg_color(Some(BrightMagenta.into())),
+                inline_html_style: Style::new().fg_color(Some(BrightMagenta.into())),
+            },
+            Preset::Nord => Theme {
+                heading_style: Style::new().fg_color(Some(BrightCyan.into())).bold(),
+                link_style: Style::new().fg_color(Some(Cyan.into())),
+                code_style: Style::new().fg_color(Some(BrightBlue.into())),
+                image_link_style: Style::new().fg_color(Some(Blue.into())),
+                rule_color: BrightBlack.into(),
+                code_block_border_color: BrightBlack.into(),
+                quote_bar_color: BrightBlack.into(),
+                html_block_style: Style::new().fg_color(Some(Cyan.into())),
+                inline_html_style: Style::new().fg_color(Some(Cyan.into())),
+            },
+        }
+    }
+}
+
 /// Combine styles.
 pub trait CombineStyle {
     /// Put this style on top of the other style.
@@ -67,5 +137,51 @@ impl CombineStyle for Style {
             .bg_color(self.get_bg_color().or(other.get_bg_color()))
             .effects(other.get_effects() | self.get_effects())
             .underline_color(self.get_underline_color().or(other.get_underline_color()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use anstyle::AnsiColor;
+
+    fn fg(s: anstyle::Style) -> Option<anstyle::Color> {
+        s.get_fg_color()
+    }
+
+    #[test]
+    fn classic_matches_legacy_default() {
+        let p = Preset::Classic.theme();
+        let d = Theme::default();
+        assert_eq!(fg(p.heading_style), fg(d.heading_style));
+        assert_eq!(fg(p.link_style), fg(d.link_style));
+        assert_eq!(fg(p.code_style), fg(d.code_style));
+        assert_eq!(p.rule_color, d.rule_color);
+        assert_eq!(p.quote_bar_color, d.quote_bar_color);
+    }
+
+    #[test]
+    fn catppuccin_heading_is_magenta_bold() {
+        let t = Preset::Catppuccin.theme();
+        assert_eq!(fg(t.heading_style), Some(AnsiColor::Magenta.into()));
+        assert!(t.heading_style.get_effects().contains(anstyle::Effects::BOLD));
+    }
+
+    #[test]
+    fn dracula_link_is_brightcyan() {
+        let t = Preset::Dracula.theme();
+        assert_eq!(fg(t.link_style), Some(AnsiColor::BrightCyan.into()));
+    }
+
+    #[test]
+    fn nord_heading_is_brightcyan_bold() {
+        let t = Preset::Nord.theme();
+        assert_eq!(fg(t.heading_style), Some(AnsiColor::BrightCyan.into()));
+        assert!(t.heading_style.get_effects().contains(anstyle::Effects::BOLD));
+    }
+
+    #[test]
+    fn default_preset_is_catppuccin() {
+        assert_eq!(Preset::default(), Preset::Catppuccin);
     }
 }
