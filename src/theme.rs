@@ -50,6 +50,11 @@ impl Default for Theme {
     }
 }
 
+/// AnsiColor slots for the eight Solarized accent colors that
+/// the syntect theme can produce. Order: yellow, orange, red,
+/// magenta, violet, blue, cyan, green.
+pub type SyntaxMap = [anstyle::AnsiColor; 8];
+
 /// Built-in color preset selectable via `--theme`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, clap::ValueEnum)]
 pub enum Preset {
@@ -118,6 +123,49 @@ impl Preset {
             },
         }
     }
+
+    /// Syntax-token AnsiColor mapping for this preset.
+    pub fn syntax_map(self) -> SyntaxMap {
+        use anstyle::AnsiColor::{
+            Blue, BrightCyan, BrightGreen, BrightMagenta, BrightRed, BrightYellow, Cyan, Green,
+            Magenta, Red, Yellow,
+        };
+        match self {
+            Preset::Catppuccin => [
+                BrightYellow,
+                BrightRed,
+                Red,
+                Magenta,
+                BrightMagenta,
+                Blue,
+                Cyan,
+                Green,
+            ],
+            Preset::Classic => [
+                Yellow,
+                BrightRed,
+                Red,
+                Magenta,
+                BrightMagenta,
+                Blue,
+                Cyan,
+                Green,
+            ],
+            Preset::Dracula => [
+                BrightYellow,
+                BrightRed,
+                BrightRed,
+                BrightMagenta,
+                BrightMagenta,
+                BrightCyan,
+                BrightCyan,
+                BrightGreen,
+            ],
+            Preset::Nord => [
+                Yellow, BrightRed, Red, Magenta, BrightCyan, Blue, Cyan, Green,
+            ],
+        }
+    }
 }
 
 /// Combine styles.
@@ -164,7 +212,10 @@ mod tests {
     fn catppuccin_heading_is_magenta_bold() {
         let t = Preset::Catppuccin.theme();
         assert_eq!(fg(t.heading_style), Some(AnsiColor::Magenta.into()));
-        assert!(t.heading_style.get_effects().contains(anstyle::Effects::BOLD));
+        assert!(t
+            .heading_style
+            .get_effects()
+            .contains(anstyle::Effects::BOLD));
     }
 
     #[test]
@@ -177,11 +228,53 @@ mod tests {
     fn nord_heading_is_brightcyan_bold() {
         let t = Preset::Nord.theme();
         assert_eq!(fg(t.heading_style), Some(AnsiColor::BrightCyan.into()));
-        assert!(t.heading_style.get_effects().contains(anstyle::Effects::BOLD));
+        assert!(t
+            .heading_style
+            .get_effects()
+            .contains(anstyle::Effects::BOLD));
     }
 
     #[test]
     fn default_preset_is_catppuccin() {
         assert_eq!(Preset::default(), Preset::Catppuccin);
+    }
+
+    #[test]
+    fn classic_syntax_map_matches_legacy_table() {
+        let m = Preset::Classic.syntax_map();
+        // Slot order: yellow, orange, red, magenta, violet, blue, cyan, green
+        assert_eq!(
+            m,
+            [
+                AnsiColor::Yellow,
+                AnsiColor::BrightRed,
+                AnsiColor::Red,
+                AnsiColor::Magenta,
+                AnsiColor::BrightMagenta,
+                AnsiColor::Blue,
+                AnsiColor::Cyan,
+                AnsiColor::Green,
+            ]
+        );
+    }
+
+    #[test]
+    fn catppuccin_syntax_map_bumps_yellow_to_bright() {
+        let m = Preset::Catppuccin.syntax_map();
+        assert_eq!(m[0], AnsiColor::BrightYellow);
+    }
+
+    #[test]
+    fn dracula_syntax_map_uses_bright_variants() {
+        let m = Preset::Dracula.syntax_map();
+        assert_eq!(m[2], AnsiColor::BrightRed); // red slot
+        assert_eq!(m[5], AnsiColor::BrightCyan); // blue slot
+        assert_eq!(m[7], AnsiColor::BrightGreen); // green slot
+    }
+
+    #[test]
+    fn nord_remaps_violet_to_brightcyan() {
+        let m = Preset::Nord.syntax_map();
+        assert_eq!(m[4], AnsiColor::BrightCyan); // violet slot
     }
 }

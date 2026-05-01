@@ -44,7 +44,7 @@ pub use crate::render::{NoopObserver, RenderObserver};
 pub use crate::resources::ResourceUrlHandler;
 pub use crate::terminal::capabilities::TerminalCapabilities;
 pub use crate::terminal::{Multiplexer, TerminalProgram, TerminalSize};
-pub use crate::theme::{Preset, Theme};
+pub use crate::theme::{Preset, SyntaxMap, Theme};
 
 mod error;
 pub mod events;
