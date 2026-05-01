@@ -13,8 +13,8 @@ use clap_complete::generate;
 use crate::args::{Args, PagingMode};
 use crate::output::Output;
 use crate::{
-    create_resource_handler, process_file, MarkdownParser, Multiplexer, Preset, Settings,
-    TerminalProgram, TerminalSize, Theme,
+    create_resource_handler, process_file, MarkdownParser, Multiplexer, Settings, TerminalProgram,
+    TerminalSize,
 };
 use syntect::parsing::SyntaxSet;
 use tracing::{event, Level};
@@ -44,6 +44,15 @@ pub fn run() -> ! {
         let mut command = Args::command();
         let subcommand = command.find_subcommand_mut(binary).unwrap();
         generate(shell, subcommand, binary, &mut std::io::stdout());
+        std::process::exit(0);
+    }
+
+    if args.list_themes {
+        use clap::ValueEnum;
+        for v in crate::Preset::value_variants() {
+            let name = v.to_possible_value().unwrap();
+            println!("{:<12} {}", name.get_name(), v.description());
+        }
         std::process::exit(0);
     }
 
@@ -114,8 +123,8 @@ pub fn run() -> ! {
                 terminal_size,
                 multiplexer,
                 syntax_set: &SyntaxSet::load_defaults_newlines(),
-                theme: Theme::default(),
-                syntax_color_map: Preset::Classic.syntax_map(),
+                theme: args.theme.theme(),
+                syntax_color_map: args.theme.syntax_map(),
                 wrap_code: args.wrap_code,
             };
             event!(

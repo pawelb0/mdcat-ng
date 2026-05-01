@@ -92,7 +92,7 @@ sixel = ["dep:icy_sixel", "image-processing"]
 anstyle = { version = "1.0.14", default-features = false }
 anyhow = { version = "1.0.102", default-features = false, features = ["std"] }
 base64 = { version = "0.22.1", default-features = false, features = ["std"] }
-clap = { version = "4.6.1", default-features = false, features = ["std", "derive", "help", "usage", "error-context"] }
+clap = { version = "4.6.1", default-features = false, features = ["std", "derive", "help", "usage", "error-context", "env"] }
 clap_complete = "4.6.2"
 # Interactive mdless pager: raw-mode terminal I/O, keystroke decoding,
 # alternate-screen handling. Cross-platform (Unix + Windows).

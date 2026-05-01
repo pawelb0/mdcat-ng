@@ -193,6 +193,12 @@ pub struct CommonArgs {
     /// Generate completions for a shell to standard output and exit.
     #[arg(long)]
     pub completions: Option<Shell>,
+    /// Color preset.
+    #[arg(long = "theme", value_enum, env = "MDCAT_THEME", default_value_t = crate::Preset::Catppuccin)]
+    pub theme: crate::Preset,
+    /// Print the available color presets and exit.
+    #[arg(long = "list-themes")]
+    pub list_themes: bool,
     /// Wrap code-block lines that exceed the terminal width instead of overflowing.
     #[arg(long = "wrap-code")]
     pub wrap_code: bool,
@@ -224,10 +230,42 @@ impl CommonArgs {
 #[cfg(test)]
 mod tests {
     use super::Args;
-    use clap::CommandFactory;
+    use clap::{CommandFactory, Parser};
 
     #[test]
     fn verify_app() {
         Args::command().debug_assert();
+    }
+
+    #[test]
+    fn default_theme_is_catppuccin() {
+        temp_env::with_var("MDCAT_THEME", None::<&str>, || {
+            let args = Args::parse_from(["mdcat", "-"]).command;
+            assert_eq!(args.theme, crate::Preset::Catppuccin);
+        });
+    }
+
+    #[test]
+    fn theme_flag_picks_nord() {
+        temp_env::with_var("MDCAT_THEME", None::<&str>, || {
+            let args = Args::parse_from(["mdcat", "--theme", "nord", "-"]).command;
+            assert_eq!(args.theme, crate::Preset::Nord);
+        });
+    }
+
+    #[test]
+    fn theme_env_var_used_when_flag_absent() {
+        temp_env::with_var("MDCAT_THEME", Some("dracula"), || {
+            let args = Args::parse_from(["mdcat", "-"]).command;
+            assert_eq!(args.theme, crate::Preset::Dracula);
+        });
+    }
+
+    #[test]
+    fn invalid_theme_name_fails_parsing() {
+        temp_env::with_var("MDCAT_THEME", None::<&str>, || {
+            let r = Args::try_parse_from(["mdcat", "--theme", "nope", "-"]);
+            assert!(r.is_err());
+        });
     }
 }

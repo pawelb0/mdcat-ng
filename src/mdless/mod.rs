@@ -37,9 +37,7 @@ use view::View;
 use crate::args::CommonArgs;
 use crate::resources::ResourceUrlHandler;
 use crate::terminal::capabilities::TerminalCapabilities;
-use crate::{
-    read_input, Environment, Multiplexer, Preset, Settings, SourceParser, TerminalProgram, Theme,
-};
+use crate::{read_input, Environment, Multiplexer, Settings, SourceParser, TerminalProgram};
 
 /// Options passed from the `mdless` CLI into the pager session.
 #[derive(Debug, Clone, Default)]
@@ -421,8 +419,8 @@ fn render_doc(
         terminal_size,
         multiplexer: Multiplexer::None,
         syntax_set: &syntax_set,
-        theme: Theme::default(),
-        syntax_color_map: Preset::Classic.syntax_map(),
+        theme: common.theme.theme(),
+        syntax_color_map: common.theme.syntax_map(),
         wrap_code: common.wrap_code,
     };
 
