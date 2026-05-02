@@ -14,25 +14,25 @@ expression: "render_to_string(\"sample/demo.md\", &settings)"
 Rust:
 
 [90m╭── rust ──────────────────────────────────────────────────────────────────────╮[0m
-[90m│ [0m[34mfn[0m [33mrender[0m([34mmd[0m: [32m&[0m[34mstr[0m) -> String {                                             [90m │[0m
-[90m│ [0m    Parser::new_ext(md, [32mmarkdown_options[0m())                                 [90m │[0m
-[90m│ [0m        .[32mmap[0m(stylise)                                                       [90m │[0m
-[90m│ [0m        .[32mcollect[0m()                                                          [90m │[0m
+[90m│ [0m[94mfn[0m [33mrender[0m([94mmd[0m: [92m&[0m[94mstr[0m) -> String {                                             [90m │[0m
+[90m│ [0m    Parser::new_ext(md, [92mmarkdown_options[0m())                                 [90m │[0m
+[90m│ [0m        .[92mmap[0m(stylise)                                                       [90m │[0m
+[90m│ [0m        .[92mcollect[0m()                                                          [90m │[0m
 [90m│ [0m}                                                                           [90m │[0m
 [90m╰──────────────────────────────────────────────────────────────────────────────╯[0m
 
 Python[^py]:
 
 [90m╭── python ────────────────────────────────────────────────────────────────────╮[0m
-[90m│ [0m[91mfrom[0m dataclasses [91mimport[0m dataclass                                           [90m │[0m
+[90m│ [0m[93mfrom[0m dataclasses [93mimport[0m dataclass                                           [90m │[0m
 [90m│ [0m                                                                            [90m │[0m
-[90m│ [0m@[34mdataclass[0m([34mfrozen[0m=[33mTrue[0m)                                                     [90m │[0m
-[90m│ [0m[32mclass[0m [33mHeading[0m:                                                              [90m │[0m
-[90m│ [0m    level: [32mint[0m                                                              [90m │[0m
-[90m│ [0m    text: [32mstr[0m                                                               [90m │[0m
+[90m│ [0m@[94mdataclass[0m([94mfrozen[0m=[33mTrue[0m)                                                     [90m │[0m
+[90m│ [0m[92mclass[0m [33mHeading[0m:                                                              [90m │[0m
+[90m│ [0m    level: [92mint[0m                                                              [90m │[0m
+[90m│ [0m    text: [92mstr[0m                                                               [90m │[0m
 [90m│ [0m                                                                            [90m │[0m
-[90m│ [0m    [32mdef[0m [33manchor[0m([34mself[0m) -> [32mstr[0m:                                                [90m │[0m
-[90m│ [0m        [32mreturn[0m [35mself[0m.text.[33mlower[0m().[33mreplace[0m("[36m [0m", "[36m-[0m")                          [90m │[0m
+[90m│ [0m    [92mdef[0m [33manchor[0m([94mself[0m) -> [92mstr[0m:                                                [90m │[0m
+[90m│ [0m        [92mreturn[0m [95mself[0m.text.[33mlower[0m().[33mreplace[0m("[96m [0m", "[96m-[0m")                          [90m │[0m
 [90m╰──────────────────────────────────────────────────────────────────────────────╯[0m
 
 TypeScript:
@@ -47,45 +47,45 @@ TypeScript:
 Bash:
 
 [90m╭── bash ──────────────────────────────────────────────────────────────────────╮[0m
-[90m│ [0m[32mfor[0m f [32min[0m target/release/mdcat target/release/mdless[32m;[0m [32mdo[0m                     [90m │[0m
-[90m│ [0m    [33mstrip[0m "[32m$[0m[34mf[0m" [32m&&[0m [33mcodesign[0m[34m --[0m[34mforce[0m[34m --[0m[34mdeep[0m[34m --[0m[34msign[0m - "[32m$[0m[34mf[0m"                     [90m │[0m
-[90m│ [0m[32mdone[0m                                                                        [90m │[0m
+[90m│ [0m[92mfor[0m f [92min[0m target/release/mdcat target/release/mdless[92m;[0m [92mdo[0m                     [90m │[0m
+[90m│ [0m    [33mstrip[0m "[92m$[0m[94mf[0m" [92m&&[0m [33mcodesign[0m[94m --[0m[94mforce[0m[94m --[0m[94mdeep[0m[94m --[0m[94msign[0m - "[92m$[0m[94mf[0m"                     [90m │[0m
+[90m│ [0m[92mdone[0m                                                                        [90m │[0m
 [90m╰──────────────────────────────────────────────────────────────────────────────╯[0m
 
 JSON:
 
 [90m╭── json ──────────────────────────────────────────────────────────────────────╮[0m
 [90m│ [0m{                                                                           [90m │[0m
-[90m│ [0m  "[36mname[0m": "[36mmdcat[0m",                                                          [90m │[0m
-[90m│ [0m  "[36mversion[0m": "[36m3.0.0[0m",                                                       [90m │[0m
-[90m│ [0m  "[36mbins[0m": ["[36mmdcat[0m", "[36mmdless[0m"],                                              [90m │[0m
-[90m│ [0m  "[36mfeatures[0m": ["[36msixel[0m", "[36msvg[0m", "[36mimage-processing[0m"]                          [90m │[0m
+[90m│ [0m  "[96mname[0m": "[96mmdcat[0m",                                                          [90m │[0m
+[90m│ [0m  "[96mversion[0m": "[96m3.0.0[0m",                                                       [90m │[0m
+[90m│ [0m  "[96mbins[0m": ["[96mmdcat[0m", "[96mmdless[0m"],                                              [90m │[0m
+[90m│ [0m  "[96mfeatures[0m": ["[96msixel[0m", "[96msvg[0m", "[96mimage-processing[0m"]                          [90m │[0m
 [90m│ [0m}                                                                           [90m │[0m
 [90m╰──────────────────────────────────────────────────────────────────────────────╯[0m
 
 SQL[^sql]:
 
 [90m╭── sql ───────────────────────────────────────────────────────────────────────╮[0m
-[90m│ [0m[32mSELECT[0m [91mheading[0m.[91mtext[0m, [32mCOUNT[0m([91mref[0m.[91mid[0m) [32mAS[0m references                            [90m │[0m
-[90m│ [0m[32mFROM[0m heading [32mLEFT JOIN[0m reference ref [32mON[0m [91mref[0m.[91mheading_id[0m = [91mheading[0m.[91mid[0m         [90m │[0m
-[90m│ [0m[32mGROUP BY[0m [91mheading[0m.[91mid[0m                                                         [90m │[0m
-[90m│ [0m[32mHAVING[0m references > [96m0[0m                                                       [90m │[0m
-[90m│ [0m[32mORDER BY[0m references [32mDESC[0m;                                                   [90m │[0m
+[90m│ [0m[92mSELECT[0m [93mheading[0m.[93mtext[0m, [92mCOUNT[0m([93mref[0m.[93mid[0m) [92mAS[0m references                            [90m │[0m
+[90m│ [0m[92mFROM[0m heading [92mLEFT JOIN[0m reference ref [92mON[0m [93mref[0m.[93mheading_id[0m = [93mheading[0m.[93mid[0m         [90m │[0m
+[90m│ [0m[92mGROUP BY[0m [93mheading[0m.[93mid[0m                                                         [90m │[0m
+[90m│ [0m[92mHAVING[0m references > [96m0[0m                                                       [90m │[0m
+[90m│ [0m[92mORDER BY[0m references [92mDESC[0m;                                                   [90m │[0m
 [90m╰──────────────────────────────────────────────────────────────────────────────╯[0m
 
 Go:
 
 [90m╭── go ────────────────────────────────────────────────────────────────────────╮[0m
-[90m│ [0m[34mfunc[0m [33mstripAnsi[0m([34mb[0m [][34mbyte[0m) [][34mbyte[0m {                                           [90m │[0m
-[90m│ [0m    [34mout[0m [32m:=[0m b[:[96m0[0m]                                                            [90m │[0m
-[90m│ [0m    [32mfor[0m [34mi[0m [32m:=[0m [96m0[0m; i [32m<[0m [32mlen[0m(b); i[32m+[0m[32m+[0m {                                           [90m │[0m
-[90m│ [0m        [32mif[0m b[i] [32m==[0m [96m0x[0m[96m1b[0m {                                                   [90m │[0m
-[90m│ [0m            i = [33mskipEscape[0m(b, i) [32m-[0m [96m1[0m                                        [90m │[0m
-[90m│ [0m            [32mcontinue[0m                                                        [90m │[0m
+[90m│ [0m[94mfunc[0m [33mstripAnsi[0m([94mb[0m [][94mbyte[0m) [][94mbyte[0m {                                           [90m │[0m
+[90m│ [0m    [94mout[0m [92m:=[0m b[:[96m0[0m]                                                            [90m │[0m
+[90m│ [0m    [92mfor[0m [94mi[0m [92m:=[0m [96m0[0m; i [92m<[0m [92mlen[0m(b); i[92m+[0m[92m+[0m {                                           [90m │[0m
+[90m│ [0m        [92mif[0m b[i] [92m==[0m [96m0x[0m[96m1b[0m {                                                   [90m │[0m
+[90m│ [0m            i = [33mskipEscape[0m(b, i) [92m-[0m [96m1[0m                                        [90m │[0m
+[90m│ [0m            [92mcontinue[0m                                                        [90m │[0m
 [90m│ [0m        }                                                                   [90m │[0m
-[90m│ [0m        out = [32mappend[0m(out, b[i])                                             [90m │[0m
+[90m│ [0m        out = [92mappend[0m(out, b[i])                                             [90m │[0m
 [90m│ [0m    }                                                                       [90m │[0m
-[90m│ [0m    [32mreturn[0m out                                                              [90m │[0m
+[90m│ [0m    [92mreturn[0m out                                                              [90m │[0m
 [90m│ [0m}                                                                           [90m │[0m
 [90m╰──────────────────────────────────────────────────────────────────────────────╯[0m
 
@@ -150,5 +150,5 @@ and a TOC modal. [^repo]: Source: https://github.com/pawelb0/mdcat-ng
 
 [90m╭── sh ────────────────────────────────────────────────────────────────────────╮[0m
 [90m│ [0m[33mmdcat[0m README.md                                                             [90m │[0m
-[90m│ [0m[33mmdless[0m[34m --[0m[34msearch[0m "[36m## Installation[0m" README.md                                 [90m │[0m
+[90m│ [0m[33mmdless[0m[94m --[0m[94msearch[0m "[96m## Installation[0m" README.md                                 [90m │[0m
 [90m╰──────────────────────────────────────────────────────────────────────────────╯[0m

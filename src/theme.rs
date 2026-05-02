@@ -145,20 +145,24 @@ impl Preset {
     /// Syntax-token AnsiColor mapping for this preset.
     pub fn syntax_map(self) -> SyntaxMap {
         use anstyle::AnsiColor::{
-            Blue, BrightCyan, BrightGreen, BrightMagenta, BrightRed, BrightYellow, Cyan, Green,
-            Magenta, Red, Yellow,
+            Blue, BrightBlue, BrightCyan, BrightGreen, BrightMagenta, BrightRed, BrightYellow,
+            Cyan, Green, Magenta, Red, Yellow,
         };
         match self {
+            // Pastel: warm slots → bright peach/yellow, blue softened to cyan,
+            // greens/cyans bumped bright. Violet collapses onto magenta.
             Preset::Catppuccin => [
                 BrightYellow,
+                BrightYellow,
                 BrightRed,
-                Red,
                 Magenta,
-                BrightMagenta,
-                Blue,
+                Magenta,
                 Cyan,
-                Green,
+                BrightCyan,
+                BrightGreen,
             ],
+            // Legacy mdcat 1.x mapping. Mirrors the old hardcoded table in
+            // `write_as_ansi`. Do not change without bumping the major.
             Preset::Classic => [
                 Yellow,
                 BrightRed,
@@ -169,6 +173,7 @@ impl Preset {
                 Cyan,
                 Green,
             ],
+            // Warm magenta-led: most slots bright; blue/violet collapse onto cyan.
             Preset::Dracula => [
                 BrightYellow,
                 BrightRed,
@@ -179,8 +184,17 @@ impl Preset {
                 BrightCyan,
                 BrightGreen,
             ],
+            // Cool/icy: blue → bright blue, violet → bright cyan, warm slots
+            // pushed yellow to keep the palette cool overall.
             Preset::Nord => [
-                Yellow, BrightRed, Red, Magenta, BrightCyan, Blue, Cyan, Green,
+                Yellow,
+                BrightYellow,
+                Red,
+                BrightMagenta,
+                BrightCyan,
+                BrightBlue,
+                BrightCyan,
+                BrightGreen,
             ],
         }
     }
@@ -277,9 +291,11 @@ mod tests {
     }
 
     #[test]
-    fn catppuccin_syntax_map_bumps_yellow_to_bright() {
+    fn catppuccin_syntax_map_softens_blue_to_cyan() {
         let m = Preset::Catppuccin.syntax_map();
-        assert_eq!(m[0], AnsiColor::BrightYellow);
+        assert_eq!(m[0], AnsiColor::BrightYellow); // yellow slot
+        assert_eq!(m[5], AnsiColor::Cyan); // blue → cyan (pastel)
+        assert_eq!(m[7], AnsiColor::BrightGreen); // green slot
     }
 
     #[test]
@@ -291,8 +307,9 @@ mod tests {
     }
 
     #[test]
-    fn nord_remaps_violet_to_brightcyan() {
+    fn nord_pushes_blue_violet_to_cool_brights() {
         let m = Preset::Nord.syntax_map();
         assert_eq!(m[4], AnsiColor::BrightCyan); // violet slot
+        assert_eq!(m[5], AnsiColor::BrightBlue); // blue → bright blue
     }
 }
