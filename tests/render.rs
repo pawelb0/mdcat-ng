@@ -121,3 +121,31 @@ fn test_render() {
         drop(_guard);
     });
 }
+
+#[test]
+fn render_themes() {
+    let mut isettings = insta::Settings::clone_current();
+    isettings.set_snapshot_path("snapshots/render");
+    isettings.set_prepend_module_to_snapshot(false);
+    let _guard = isettings.bind_to_scope();
+
+    for preset in [
+        Preset::Catppuccin,
+        Preset::Classic,
+        Preset::Dracula,
+        Preset::Nord,
+    ] {
+        let settings = Settings {
+            terminal_capabilities: TerminalProgram::Ansi.capabilities(),
+            terminal_size: TerminalSize::default(),
+            multiplexer: Multiplexer::default(),
+            theme: preset.theme(),
+            syntax_color_map: preset.syntax_map(),
+            syntax_set: syntax_set(),
+            wrap_code: false,
+        };
+        let name = format!("themes-{preset:?}").to_lowercase();
+        assert_snapshot!(name, render_to_string("sample/demo.md", &settings));
+    }
+    drop(_guard);
+}

@@ -1,0 +1,154 @@
+---
+source: tests/render.rs
+expression: "render_to_string(\"sample/demo.md\", &settings)"
+---
+[1m[95mmdcat-ng 0.2[0m
+[1m[95m════════════════════════════════════════════════════════════════════════════════[0m
+
+[1mFancy[0m[1m[93m cat[0m[1m for CommonMark — with inline images, OSC 8 links,[0m[1m GFM alerts,[0m
+[1mfootnotes, and a markdown-aware interactive viewer.[0m
+
+[1m[95mSyntax highlighting across languages[0m
+[1m[95m────────────────────────────────────────────────────────────────────────────────[0m
+
+Rust:
+
+[90m╭── rust ──────────────────────────────────────────────────────────────────────╮[0m
+[90m│ [0m[96mfn[0m [93mrender[0m([96mmd[0m: [92m&[0m[96mstr[0m) -> String {                                             [90m │[0m
+[90m│ [0m    Parser::new_ext(md, [92mmarkdown_options[0m())                                 [90m │[0m
+[90m│ [0m        .[92mmap[0m(stylise)                                                       [90m │[0m
+[90m│ [0m        .[92mcollect[0m()                                                          [90m │[0m
+[90m│ [0m}                                                                           [90m │[0m
+[90m╰──────────────────────────────────────────────────────────────────────────────╯[0m
+
+Python[^py]:
+
+[90m╭── python ────────────────────────────────────────────────────────────────────╮[0m
+[90m│ [0m[91mfrom[0m dataclasses [91mimport[0m dataclass                                           [90m │[0m
+[90m│ [0m                                                                            [90m │[0m
+[90m│ [0m@[96mdataclass[0m([96mfrozen[0m=[93mTrue[0m)                                                     [90m │[0m
+[90m│ [0m[92mclass[0m [93mHeading[0m:                                                              [90m │[0m
+[90m│ [0m    level: [92mint[0m                                                              [90m │[0m
+[90m│ [0m    text: [92mstr[0m                                                               [90m │[0m
+[90m│ [0m                                                                            [90m │[0m
+[90m│ [0m    [92mdef[0m [93manchor[0m([96mself[0m) -> [92mstr[0m:                                                [90m │[0m
+[90m│ [0m        [92mreturn[0m [95mself[0m.text.[93mlower[0m().[93mreplace[0m("[96m [0m", "[96m-[0m")                          [90m │[0m
+[90m╰──────────────────────────────────────────────────────────────────────────────╯[0m
+
+TypeScript:
+
+[90m╭── typescript ────────────────────────────────────────────────────────────────╮[0m
+[90m│ [0mtype Match = { line: number; styled: [number, number] };                    [90m │[0m
+[90m│ [0m                                                                            [90m │[0m
+[90m│ [0mconst firstAfter = (matches: Match[], top: number): Match | null =>         [90m │[0m
+[90m│ [0m    matches.find(m => m.line > top) ?? null;                                [90m │[0m
+[90m╰──────────────────────────────────────────────────────────────────────────────╯[0m
+
+Bash:
+
+[90m╭── bash ──────────────────────────────────────────────────────────────────────╮[0m
+[90m│ [0m[92mfor[0m f [92min[0m target/release/mdcat target/release/mdless[92m;[0m [92mdo[0m                     [90m │[0m
+[90m│ [0m    [93mstrip[0m "[92m$[0m[96mf[0m" [92m&&[0m [93mcodesign[0m[96m --[0m[96mforce[0m[96m --[0m[96mdeep[0m[96m --[0m[96msign[0m - "[92m$[0m[96mf[0m"                     [90m │[0m
+[90m│ [0m[92mdone[0m                                                                        [90m │[0m
+[90m╰──────────────────────────────────────────────────────────────────────────────╯[0m
+
+JSON:
+
+[90m╭── json ──────────────────────────────────────────────────────────────────────╮[0m
+[90m│ [0m{                                                                           [90m │[0m
+[90m│ [0m  "[96mname[0m": "[96mmdcat[0m",                                                          [90m │[0m
+[90m│ [0m  "[96mversion[0m": "[96m3.0.0[0m",                                                       [90m │[0m
+[90m│ [0m  "[96mbins[0m": ["[96mmdcat[0m", "[96mmdless[0m"],                                              [90m │[0m
+[90m│ [0m  "[96mfeatures[0m": ["[96msixel[0m", "[96msvg[0m", "[96mimage-processing[0m"]                          [90m │[0m
+[90m│ [0m}                                                                           [90m │[0m
+[90m╰──────────────────────────────────────────────────────────────────────────────╯[0m
+
+SQL[^sql]:
+
+[90m╭── sql ───────────────────────────────────────────────────────────────────────╮[0m
+[90m│ [0m[92mSELECT[0m [91mheading[0m.[91mtext[0m, [92mCOUNT[0m([91mref[0m.[91mid[0m) [92mAS[0m references                            [90m │[0m
+[90m│ [0m[92mFROM[0m heading [92mLEFT JOIN[0m reference ref [92mON[0m [91mref[0m.[91mheading_id[0m = [91mheading[0m.[91mid[0m         [90m │[0m
+[90m│ [0m[92mGROUP BY[0m [91mheading[0m.[91mid[0m                                                         [90m │[0m
+[90m│ [0m[92mHAVING[0m references > [95m0[0m                                                       [90m │[0m
+[90m│ [0m[92mORDER BY[0m references [92mDESC[0m;                                                   [90m │[0m
+[90m╰──────────────────────────────────────────────────────────────────────────────╯[0m
+
+Go:
+
+[90m╭── go ────────────────────────────────────────────────────────────────────────╮[0m
+[90m│ [0m[96mfunc[0m [93mstripAnsi[0m([96mb[0m [][96mbyte[0m) [][96mbyte[0m {                                           [90m │[0m
+[90m│ [0m    [96mout[0m [92m:=[0m b[:[95m0[0m]                                                            [90m │[0m
+[90m│ [0m    [92mfor[0m [96mi[0m [92m:=[0m [95m0[0m; i [92m<[0m [92mlen[0m(b); i[92m+[0m[92m+[0m {                                           [90m │[0m
+[90m│ [0m        [92mif[0m b[i] [92m==[0m [95m0x[0m[95m1b[0m {                                                   [90m │[0m
+[90m│ [0m            i = [93mskipEscape[0m(b, i) [92m-[0m [95m1[0m                                        [90m │[0m
+[90m│ [0m            [92mcontinue[0m                                                        [90m │[0m
+[90m│ [0m        }                                                                   [90m │[0m
+[90m│ [0m        out = [92mappend[0m(out, b[i])                                             [90m │[0m
+[90m│ [0m    }                                                                       [90m │[0m
+[90m│ [0m    [92mreturn[0m out                                                              [90m │[0m
+[90m│ [0m}                                                                           [90m │[0m
+[90m╰──────────────────────────────────────────────────────────────────────────────╯[0m
+
+[1m[95mA tight feature matrix[0m
+[1m[95m────────────────────────────────────────────────────────────────────────────────[0m
+
+[95m┌────────────────────┬─────┬─────┬─────────────────────────────┐[0m
+[95m│[0m[1m Capability         [0m[95m│[0m[1m 2.x [0m[95m│[0m[1m 0.2 [0m[95m│[0m[1m Notes                       [0m[95m│[0m
+[95m├────────────────────┼─────┼─────┼─────────────────────────────┤[0m
+[95m│[0m Inline images      [95m│[0m  ✓  [95m│[0m  ✓  [95m│[0m iTerm2, Kitty, Sixel, …     [95m│[0m
+[95m│[0m Interactive viewer [95m│[0m     [95m│[0m  ✓  [95m│[0m vi keys, search, bookmarks  [95m│[0m
+[95m│[0m GFM alerts         [95m│[0m     [95m│[0m  ✓  [95m│[0m NOTE / TIP / WARNING / …    [95m│[0m
+[95m│[0m Footnotes          [95m│[0m     [95m│[0m  ✓  [95m│[0m Refs + bottom-of-doc bodies [95m│[0m
+[95m│[0m Definition lists   [95m│[0m     [95m│[0m  ✓  [95m│[0m                             [95m│[0m
+[95m│[0m Wiki links         [95m│[0m     [95m│[0m  ✓  [95m│[0m [[Page]]                    [95m│[0m
+[95m│[0m tmux passthrough   [95m│[0m     [95m│[0m  ✓  [95m│[0m Images survive multiplexers [95m│[0m
+[95m└────────────────────┴─────┴─────┴─────────────────────────────┘[0m
+
+[1m[95mAlert blockquotes speak colour[0m
+[1m[95m────────────────────────────────────────────────────────────────────────────────[0m
+
+[90m▌ [0m[3m[[0m[3m!NOTE[0m[3m][0m[3m mdcat tags alert blockquotes with a coloured label you can see.[0m
+
+[90m▌ [0m[3m[[0m[3m!TIP[0m[3m][0m[3m Run[0m[3m[93m mdless FILE[0m[3m for the built-in interactive viewer.[0m
+
+[90m▌ [0m[3m[[0m[3m!WARNING[0m[3m][0m[3m Image protocols are stripped inside[0m[3m[93m mdless[0m[3m — scrolling is safe.[0m
+
+[1m[95mTask lists track progress[0m
+[1m[95m────────────────────────────────────────────────────────────────────────────────[0m
+
+• ☑ Ship the interactive viewer ([93mmdless[0m)
+• ☑ Land markdown extensions
+• ☑ Record a demo worth watching
+• ☐ Sleep
+
+[1m[95mDefinition lists name things[0m
+[1m[95m────────────────────────────────────────────────────────────────────────────────[0m
+
+pulldown-cmark : upstream CommonMark parser mdcat consumes.
+
+syntect : syntax highlighter behind every fenced code block.
+
+resvg : SVG rasteriser feeding pixel protocols.
+
+[1m[95mFootnotes and wiki links[0m
+[1m[95m────────────────────────────────────────────────────────────────────────────────[0m
+
+Click the names: [[HomePage]] or [[Installation|installation docs]] render as
+OSC 8 hyperlinks. Inline references surface in the body[^mdless] and collect
+their bodies[^repo] at the bottom of the document.
+
+[^py]: The[93m dataclasses[0m decorator landed in 3.7;[93m frozen=True[0m makes instances
+hashable and immutable. [^sql]: The query tallies how many footnote references
+point at each heading — useful for finding popular sections. [^mdless]:[93m mdless[0m
+turns the same document into an interactive view with search, jumps, bookmarks,
+and a TOC modal. [^repo]: Source: https://github.com/pawelb0/mdcat-ng
+
+[95m════════════════════════════════════════════════════════════════════════════════[0m
+
+[1m[95mTry it yourself[0m
+[1m[95m────────────────────────────────────────────────────────────────────────────────[0m
+
+[90m╭── sh ────────────────────────────────────────────────────────────────────────╮[0m
+[90m│ [0m[93mmdcat[0m README.md                                                             [90m │[0m
+[90m│ [0m[93mmdless[0m[96m --[0m[96msearch[0m "[96m## Installation[0m" README.md                                 [90m │[0m
+[90m╰──────────────────────────────────────────────────────────────────────────────╯[0m
