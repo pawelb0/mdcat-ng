@@ -105,4 +105,37 @@ mod cli {
         similar_asserts::assert_eq!(String::from_utf8_lossy(&stderr), "");
         assert_eq!(exit_code.code().unwrap(), 0);
     }
+
+    #[test]
+    fn list_themes_prints_four_presets() {
+        let output = run_cargo_mdcat(["--list-themes"]);
+        let stdout = std::str::from_utf8(&output.stdout).unwrap();
+        assert!(output.status.success());
+        let lines: Vec<&str> = stdout.lines().collect();
+        assert_eq!(lines.len(), 4, "stdout: {stdout:?}");
+        assert!(lines[0].starts_with("catppuccin"));
+        assert!(lines[1].starts_with("classic"));
+        assert!(lines[2].starts_with("dracula"));
+        assert!(lines[3].starts_with("nord"));
+    }
+
+    #[test]
+    fn theme_flag_renders_with_preset() {
+        let output = run_cargo_mdcat(["--ansi", "--theme", "nord", "sample/common-mark.md"]);
+        let stdout = std::str::from_utf8(&output.stdout).unwrap();
+        assert!(output.status.success());
+        // Nord heading slot is BrightCyan = SGR 96.
+        assert!(
+            stdout.contains("\x1b[1m\x1b[96m"),
+            "missing Nord heading SGR"
+        );
+    }
+
+    #[test]
+    fn invalid_theme_value_is_rejected() {
+        let output = run_cargo_mdcat(["--theme", "nope", "sample/common-mark.md"]);
+        let stderr = std::str::from_utf8(&output.stderr).unwrap();
+        assert_eq!(output.status.code(), Some(2));
+        assert!(stderr.contains("nope"), "stderr: {stderr}");
+    }
 }
