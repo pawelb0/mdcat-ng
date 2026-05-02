@@ -122,6 +122,13 @@ Common to both binaries unless noted.
 *--wrap-code*::
     Wrap code-block lines instead of overflowing.
 
+*--theme=_NAME_*::
+    Color preset. One of: *catppuccin* (default), *classic*,
+    *dracula*, *nord*. Also read from *MDCAT_THEME*.
+
+*--list-themes*::
+    Print available color presets and exit.
+
 *--completions=_SHELL_*::
     Generate completions for _SHELL_ (`bash`, `zsh`, `fish`,
     `powershell`, `elvish`) to stdout and exit.
@@ -220,6 +227,9 @@ render input.
     Command for `mdcat --paginate` and `mdless --external-pager`.
     Default: `less -r`. Empty `$MDCAT_PAGER` disables pagination.
 
+*MDCAT_THEME*::
+    Default value for *--theme*. The flag overrides the env var.
+
 *http_proxy*, *https_proxy*, *HTTPS_PROXY*, *all_proxy*, *ALL_PROXY*, *no_proxy*, *NO_PROXY*::
     libcurl proxy settings. See *curl(1)*.
 
@@ -247,8 +257,6 @@ render input.
 == Bugs
 
 Report at https://github.com/pawelb0/mdcat-ng/issues.
-
-Themes are fixed at compile time.
 
 == See also
 

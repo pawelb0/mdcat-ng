@@ -8,6 +8,18 @@ Use `cargo release` to create a new release.
 
 ## [Unreleased]
 
+### Added
+
+- `--theme NAME` flag (also `MDCAT_THEME` env var) to choose a
+  color preset. Presets shipped: `catppuccin`, `classic`,
+  `dracula`, `nord`.
+- `--list-themes` to print the available preset names.
+
+### Changed
+
+- Default color preset is now `catppuccin`. Pass `--theme classic`
+  or set `MDCAT_THEME=classic` to keep the previous appearance.
+
 ## [0.2.1] – 2026-04-23
 
 ### Fixed

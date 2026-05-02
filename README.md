@@ -77,9 +77,23 @@ mdcat --paginate FILE          # pipe through $PAGER / less -r
 mdcat --columns 80 FILE        # pin wrap width
 mdcat --ansi FILE              # force styling when stdout isn't a TTY
 mdcat --detect-terminal        # report the detected terminal + caps
+mdcat --theme NAME FILE        # pick color preset (catppuccin, classic, dracula, nord)
 ```
 
 Full flag list: `mdcat --help` or [`mdcat(1)`](./mdcat.1.adoc).
+
+### Themes
+
+mdcat ships four ANSI color presets: `catppuccin` (default),
+`classic` (the mdcat 1.x palette), `dracula`, `nord`. Pick with
+`--theme NAME` or set `MDCAT_THEME` in your shell rc. Run
+`mdcat --list-themes` to see the names.
+
+mdcat emits ANSI named colors only. Each preset picks slots from
+your terminal's 16-color palette; the actual hue comes from your
+terminal's color scheme. To restore the previous mdcat 1.x
+appearance, run with `--theme classic` or set
+`MDCAT_THEME=classic`.
 
 ### Piped output
 
@@ -206,24 +220,27 @@ truncate with `…`.
 ## Library use
 
 ```rust
-use mdcat::{push_tty, Environment, Settings, TerminalProgram, Theme};
-use pulldown_cmark::Parser;
+use mdcat::{
+    push_tty, Environment, MarkdownParser, Preset, Settings, SourceParser, TerminalProgram,
+};
 use syntect::parsing::SyntaxSet;
 
 let markdown = "# Hello\n\nRendered with **mdcat**.\n";
+let preset = Preset::default();
 let settings = Settings {
     terminal_capabilities: TerminalProgram::Ansi.capabilities(),
     terminal_size: Default::default(),
     multiplexer: mdcat::Multiplexer::None,
     syntax_set: &SyntaxSet::load_defaults_newlines(),
-    theme: Theme::default(),
+    theme: preset.theme(),
+    syntax_color_map: preset.syntax_map(),
     wrap_code: false,
 };
 let env = Environment::for_local_directory(&std::env::current_dir()?)?;
 let handler = mdcat::create_resource_handler(mdcat::args::ResourceAccess::LocalOnly)?;
 
 let mut out = Vec::new();
-push_tty(&settings, &env, &handler, &mut out, Parser::new(markdown))?;
+push_tty(&settings, &env, &handler, &mut out, MarkdownParser.parse(markdown))?;
 ```
 
 ## Packaging
