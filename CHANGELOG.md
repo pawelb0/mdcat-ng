@@ -8,6 +8,15 @@ Use `cargo release` to create a new release.
 
 ## [Unreleased]
 
+## [0.2.3] – 2026-05-02
+
+### Changed
+
+- Catppuccin and Nord syntax accent maps reworked so each preset
+  renders visibly different code-block colors on a shared
+  terminal palette. Catppuccin softens blue → cyan, Nord pushes
+  blue → bright blue, both bump green to bright.
+
 ## [0.2.2] – 2026-04-30
 
 ### Added
