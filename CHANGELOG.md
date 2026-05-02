@@ -8,6 +8,8 @@ Use `cargo release` to create a new release.
 
 ## [Unreleased]
 
+## [0.2.2] – 2026-04-30
+
 ### Added
 
 - `--theme NAME` flag (also `MDCAT_THEME` env var) to choose a

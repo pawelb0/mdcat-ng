@@ -1,8 +1,8 @@
 = mdcat(1)
 mdcat-ng contributors
 :doctype: manpage
-:revnumber: 0.2.1
-:revdate: 2026-04-20
+:revnumber: 0.2.2
+:revdate: 2026-04-30
 :mansource: mdcat {revnumber}
 :manmanual: mdcat
 
